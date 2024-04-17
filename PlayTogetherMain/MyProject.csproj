@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<Configurations>Debug;Release</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="resources\MoonlightPortable-x64-5.0.1.zip" />
+    <None Remove="resources\sunshine-windows-portable.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="resources\MoonlightPortable-x64-5.0.1.zip" />
+    <EmbeddedResource Include="resources\sunshine-windows-portable.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<PackageReference Include="ILMerge" Version="3.0.41" />
+    <Reference Include="0Harmony">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\ChilloutVR\MelonLoader\net35\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\.ManagedLibs\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="BTKUILib">
+      <HintPath>..\OtherDeps\BTKUILib.dll</HintPath>
+    </Reference>
+    <Reference Include="MelonLoader">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\ChilloutVR\MelonLoader\net35\MelonLoader.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\ChilloutVR\MelonLoader\net35\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="MyModLib">
+      <HintPath>..\MyModLib\bin\Debug\netstandard2.1\MyModLib.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>..\.ManagedLibs\UnityEngine.dll</HintPath>
+    </Reference>
+	<Reference Include="UnityEngine.CoreModule">
+	  <HintPath>..\.ManagedLibs\UnityEngine.CoreModule.dll</HintPath>
+	</Reference>
+	<Reference Include="UnityEngine.CoreModule">
+	  <HintPath>..\.ManagedLibs\UnityEngine.PhysicsModule.dll</HintPath>
+	</Reference>
+  </ItemGroup>
+
+	<Target Name="ILMerge">
+		<!-- the ILMergePath property points to the location of ILMerge.exe console application -->
+		<Exec Command="$(ILMergeConsolePath) C:\Users\JP\Documents\PROJECTS\CVRDesktop\MyProject\bin\Debug\netstandard2.1\MyProject.dll /out:ILMergeOut/MyModLib.dll C:\Users\JP\Documents\PROJECTS\CVRDesktop\MyProject\bin\Debug\netstandard2.1\MyModLib.dll" />
+	</Target>
+
+</Project>

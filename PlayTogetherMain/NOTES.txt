@@ -1,0 +1,18 @@
+Merged DLL breaks the mod. The UI works but the desktopview is no longer applied to the prop...
+Even renaming the merged .dll to MyModLib.dll in hope that it properly refers to itself doesnt work.. 
+
+Possible cause: The local signature of the desktopview is no longer the same as the remote one on the prop. Test my uploading one that uses the same merged .DLL! :)
+Check newly generated DLLs (not merged), maybe I broke something.. or im not using the right stuff.
+I dont see any errors in the melon console though... Check with Unity Explorer
+
+The best solution might just be to combine the two projects into one... NOPE!! Cant do that since we cant have all the melonloader dependencies be tied to the prop in unity.
+
+
+***It was indeed a signature problem. Now the merge works.***
+
+- Might want to remove Runtime from unity project's uWindowCapture and have it use our compiled DLL.
+- make sure in instructions to include how we need to execute ILMerge in Visual Studio's Dev console via msbuild /t:ILMerge 
+
+
+***Every time a change is made the Prop needs to be updated with the newest DLL. (Not the merged one or it wont work.) The signature for MyModLib must be the exact same.
+***THE MERGED DLL MIGHT NEED TO HAVE THE SAME NAME AS THE ONE IN UNITY FOR THE PROP (unfortunately)

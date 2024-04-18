@@ -7,3 +7,6 @@
 [submodule "NStrip"]
 	path = NStrip
 	url = https://github.com/Searaphim/NStrip
+[submodule "PlayTogetherMain/BTKUILib"]
+	path = PlayTogetherMain/BTKUILib
+	url = https://github.com/Searaphim/BTKUILib

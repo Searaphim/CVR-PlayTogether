@@ -1,0 +1,6 @@
+[submodule "PlayTogetherMain/moonlight-qt"]
+	path = PlayTogetherMain/moonlight-qt
+	url = https://github.com/Searaphim/moonlight-qt
+[submodule "PlayTogetherMain/Sunshine"]
+	path = PlayTogetherMain/Sunshine
+	url = https://github.com/Searaphim/Sunshine

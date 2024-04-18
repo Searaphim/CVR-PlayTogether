@@ -4,3 +4,6 @@
 [submodule "PlayTogetherMain/Sunshine"]
 	path = PlayTogetherMain/Sunshine
 	url = https://github.com/Searaphim/Sunshine
+[submodule "NStrip"]
+	path = NStrip
+	url = https://github.com/Searaphim/NStrip

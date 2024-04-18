@@ -1,7 +1,7 @@
 CVR-PlayTogether
 ===================
 
-**CVR-PlayTogether** is a ChilloutVR Mod that aims reproduce a Couch Gaming / Lan Party experience in VR.
+**CVR-PlayTogether** is a ChilloutVR Mod that aims to reproduce a Couch Gaming / Lan Party experience in VR.
 
 It does so by Hosting/Streaming one's game (and inputs) with friends of your choosing and displaying that on a shared "physical" Screen spawned in-game.
 

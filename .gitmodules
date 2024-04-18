@@ -10,3 +10,6 @@
 [submodule "PlayTogetherMain/BTKUILib"]
 	path = PlayTogetherMain/BTKUILib
 	url = https://github.com/Searaphim/BTKUILib
+[submodule "ILMerge"]
+	path = ILMerge
+	url = https://github.com/Searaphim/ILMerge

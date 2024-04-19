@@ -1,5 +1,8 @@
 .vs
 bin/*
-ILMergeOut/*
+ILMergeOut/*.dll
+ILMergeOut/*.pdb
 obj/*
-resources/*
+resources/*.zip
+libs/*.dll
+libs/*.xml

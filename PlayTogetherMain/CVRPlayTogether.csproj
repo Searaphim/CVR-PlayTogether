@@ -34,8 +34,8 @@
     <Reference Include="Mono.Cecil">
       <HintPath>libs\Mono.Cecil.dll</HintPath>
     </Reference>
-    <Reference Include="MyModLib">
-      <HintPath>..\PlayTogetherLib\bin\Debug\netstandard2.1\MyModLib.dll</HintPath>
+    <Reference Include="CVRPlayTogetherLib">
+      <HintPath>..\PlayTogetherLib\bin\Debug\netstandard2.1\CVRPlayTogetherLib.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\.ManagedLibs\UnityEngine.dll</HintPath>
@@ -50,7 +50,7 @@
 
 	<Target Name="ILMerge">
 		<!-- the ILMergePath property points to the location of ILMerge.exe console application -->
-		<Exec Command="$(ILMergeConsolePath) bin\Debug\netstandard2.1\MyProject.dll /out:ILMergeOut/MyModLib.dll bin\Debug\netstandard2.1\MyModLib.dll" />
+		<Exec Command="$(ILMergeConsolePath) bin\Debug\netstandard2.1\CVRPlayTogether.dll /out:ILMergeOut/CVRPlayTogetherLib.dll bin\Debug\netstandard2.1\CVRPlayTogetherLib.dll" />
 	</Target>
 
 </Project>

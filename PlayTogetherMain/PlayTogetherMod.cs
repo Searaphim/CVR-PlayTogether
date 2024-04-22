@@ -13,18 +13,18 @@ using uWindowCapture;
 using System.IO.Compression;
 using System.IO;
 
-namespace uWindowCaptureMod
+namespace PlayTogetherMod
 {
-    public class MyMod : MelonMod
+    public class PlayTogether : MelonMod
     {
         private Page _rootPage;
         public const string PROP_SCENE = "AdditiveContentScene";
         //Root working dir at runtime is 'ChilloutVR'
-        public const string RESOURCE_FOLDER = "Mods/MyModData";
+        public const string RESOURCE_FOLDER = "Mods/CVRPlayTogether_Data";
         public const string MOONLIGHT_PATH = RESOURCE_FOLDER + "/Moonlight/Moonlight.exe";
         public const string SUNSHINE_PATH = RESOURCE_FOLDER + "/Sunshine/sunshine.exe";
-        public const string MOONLIGHT_RESOURCE = "MyProject.resources.MoonlightPortable-x64-5.0.1.zip";
-        public const string SUNSHINE_RESOURCE = "MyProject.resources.sunshine-windows-portable.zip";
+        public const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
+        public const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
 
 
         private void UnpackResources()
@@ -38,8 +38,8 @@ namespace uWindowCaptureMod
 
         private void MakeUI()
         {
-            _rootPage = new Page("MyMod", "Root Page", true);
-            _rootPage.MenuTitle = "MyMod Settings";
+            _rootPage = new Page("CVR-PlayTogether", "Root Page", true);
+            _rootPage.MenuTitle = "CVR-PlayTogether Settings";
             _rootPage.MenuSubtitle = "Settings are applied to EVERY spawned screen";
 
             var category = _rootPage.AddCategory("Global Settings");

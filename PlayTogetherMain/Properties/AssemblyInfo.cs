@@ -1,5 +1,7 @@
 using MelonLoader;
-using uWindowCaptureMod;
+using PlayTogetherMod;
 // ...
-[assembly: MelonInfo(typeof(uWindowCaptureMod.MyMod), "CVRDesktop", "1.0.0", "searaphim")]
-[assembly: MelonGame()]
+[assembly: MelonInfo(typeof(PlayTogetherMod.PlayTogether), "CVR-PlayTogether", "1.0.0", "Searaphim", "https://github.com/Searaphim/CVR-PlayTogether/")]
+[assembly: MelonGame("Alpha Blend Interactive", "ChilloutVR")]
+[assembly: MelonPlatform(MelonPlatformAttribute.CompatiblePlatforms.WINDOWS_X64)]
+[assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.MONO)]

@@ -47,10 +47,16 @@
 	  <HintPath>..\.ManagedLibs\UnityEngine.PhysicsModule.dll</HintPath>
 	</Reference>
   </ItemGroup>
-
-	<Target Name="ILMerge">
-		<!-- the ILMergePath property points to the location of ILMerge.exe console application -->
-		<Exec Command="$(ILMergeConsolePath) bin\Debug\netstandard2.1\CVRPlayTogether.dll /out:ILMergeOut/CVRPlayTogetherLib.dll bin\Debug\netstandard2.1\CVRPlayTogetherLib.dll" />
+	<Target Name="CleanMerge" BeforeTargets="Clean">
+		<RemoveDir Directories="ILMergeOut/out" />
 	</Target>
-
+	<Target Name="ILMerge" AfterTargets="Build">
+		<!-- the ILMergePath property points to the location of ILMerge.exe console application -->
+		<MakeDir Directories="ILMergeOut/out" />
+		<Exec Command="$(ILMergeConsolePath) bin\Debug\netstandard2.1\CVRPlayTogether.dll /out:ILMergeOut/out/CVRPlayTogetherLib.dll ..\PlayTogetherLib\bin\Debug\netstandard2.1\CVRPlayTogetherLib.dll" />
+	</Target>
+	<Target Name="Install" AfterTargets="ILMerge">
+		<Exec Command="copy &quot;ILMergeOut/out/CVRPlayTogetherLib.dll&quot; &quot;C:/Program Files (x86)/Steam/steamapps/common/ChilloutVR/Mods/&quot;"/>
+	</Target>
+	
 </Project>

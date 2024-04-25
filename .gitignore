@@ -1,1 +1,3 @@
-.ManagedLibs/*.dll
+*.dll
+*.pdb
+*.csproj.user

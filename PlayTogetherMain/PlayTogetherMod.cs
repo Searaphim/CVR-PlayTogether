@@ -17,66 +17,42 @@ namespace PlayTogetherMod
 {
     public class PlayTogether : MelonMod
     {
-        private Page _rootPage;
-        public const string PROP_SCENE = "AdditiveContentScene";
-        //Root working dir at runtime is 'ChilloutVR'
-        public const string RESOURCE_FOLDER = "Mods/CVRPlayTogether_Data";
-        public const string MOONLIGHT_PATH = RESOURCE_FOLDER + "/Moonlight/Moonlight.exe";
-        public const string SUNSHINE_PATH = RESOURCE_FOLDER + "/Sunshine/sunshine.exe";
-        public const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
-        public const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
-
-
-        private void UnpackResources()
-        {
-            ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
-            zip.ExtractToDirectory(RESOURCE_FOLDER + "/Moonlight", true);
-            zip.Dispose();
-            zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
-            zip.ExtractToDirectory(RESOURCE_FOLDER, true);
-        }
-
-        private void MakeUI()
-        {
-            _rootPage = new Page("CVR-PlayTogether", "Root Page", true);
-            _rootPage.MenuTitle = "CVR-PlayTogether Settings";
-            _rootPage.MenuSubtitle = "Settings are applied to EVERY spawned screen";
-
-            var category = _rootPage.AddCategory("Global Settings");
-
-            var sliderFPS = category.AddSlider("FPS", "Adjust the framerate.", 30f, 0f, 144f);
-            var buttonApply = category.AddButton("Apply", "", "Apply settings to active screens");
-            buttonApply.OnPress += () =>
-            {
-                Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
-                if (!sceneInstance.IsValid()) return;
-                GameObject[] gObjs = sceneInstance.GetRootGameObjects();
-                foreach (var item in gObjs)
-                {
-                    uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
-                    if (comp == null) return;
-                    comp.captureFrameRate = (int)Math.Round(sliderFPS.SliderValue, 0);
-                    //TODO: Add the rest of the settings here
-                }
-            };
-        }
+        private Page _exampleRootPage;
 
         public override void OnInitializeMelon()
         {
-            UnpackResources();
-            //Our CCK Prop contains a custom MonoBehavior script component. We force-allow it here.
-            var propWhitelist = SharedFilter._spawnableWhitelist;
-            propWhitelist.Add(typeof(uWindowCapture.UwcWindowTexture));
-            //Assembly assembly = Assembly.GetAssembly(typeof(uWindowCapture.UwcWindowTexture));
-            //propWhitelist.Add(assembly.GetType("uWindowCapture.UwcWindowTexture"));
+            //This creates our root page AND the tab
+            _exampleRootPage = new Page("OurMod", "Example Root", true, "BTKIcon");
+            //This sets the title that appears at the very top in the header bar
+            _exampleRootPage.MenuTitle = "Example UI";
+            //This sets the subtitle that appears in the header bar
+            _exampleRootPage.MenuSubtitle = "This is a subtitle!";
 
-            //UI
-            MakeUI();
-        }
+            //Let's make some elements!
 
-        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
-        {
-            LoggerInstance.Msg($"Scene {sceneName} with build index {buildIndex} has been loaded!");
+            //This section creates our category and adds some simple elements to it
+            var category = _exampleRootPage.AddCategory("Our Category");
+            var button = category.AddButton("Test Button", "", "This is a test button!");
+            button.OnPress += () =>
+            {
+                LoggerInstance.Msg("You clicked a button!");
+                //Let's pop up a notice!
+                QuickMenuAPI.ShowNotice("Notice!", "Notice me!");
+            };
+
+            var toggle = category.AddToggle("Toggle Time!", "Click the toggle to toggle a thing!", false);
+            toggle.OnValueUpdated += b =>
+            {
+                LoggerInstance.Msg($"Our toggle just went {b}");
+            };
+
+            //How about a sub page?
+
+            var subPage = category.AddPage("This is a subpage!", "", "Click here to open another page!", "OurMod");
+            //Now we can do the same as above, or whatever else!
+
+            //Sliders?
+            subPage.AddSlider("Slider Time", "This is a slider!", 5f, 0f, 10f);
         }
 
     }

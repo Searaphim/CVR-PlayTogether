@@ -56,7 +56,7 @@
 		<Exec Command="$(ILMergeConsolePath) /out:ILMergeOut\out\CVRPlayTogetherLib.dll bin\Debug\netstandard2.1\CVRPlayTogether.dll ..\PlayTogetherLib\bin\Debug\netstandard2.1\CVRPlayTogetherLib.dll" />
 	</Target>
 	<Target Name="Install" AfterTargets="ILMerge">
-		<Exec Command="copy /y &quot;ILMergeOut\out\CVRPlayTogetherLib.dll&quot; &quot;C:/Program Files (x86)/Steam/steamapps/common/ChilloutVR/Mods/CVRPlayTogetherLib.dll&quot;"/>
+		<Exec Command="copy /y &quot;ILMergeOut\out\CVRPlayTogetherLib.dll&quot; &quot;C:/Program Files (x86)/Steam/steamapps/common/ChilloutVR/Mods/CVRPlayTogetherLib.dll&quot;" />
 	</Target>
 	
 </Project>

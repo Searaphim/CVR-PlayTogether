@@ -88,7 +88,7 @@ namespace PlayTogetherMod
         {
             if (!normalprocess.HasExited)
             {
-                normalprocess.Close();
+                normalprocess.Kill();
                 normalprocess.WaitForExit();
             }
         }
@@ -164,6 +164,7 @@ namespace PlayTogetherMod
                 else
                 {
                     _sunshine.Stop();
+                    LoggerInstance.Msg($"Hosting terminated.");
                     pinPage.Disabled = true;
                 }
             };

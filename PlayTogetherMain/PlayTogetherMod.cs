@@ -142,6 +142,13 @@ namespace PlayTogetherMod
             };
 
             var hostCat = _rootPage.AddCategory("Game Hosting");
+            var ipPage = hostCat.AddPage("IP INFO", "", "ONLY SHARE WITH TRUSTED PLAYERS", "CVRPlayTogether");
+            var ipCat = ipPage.AddCategory("Host's (YOUR) Internet IP");
+            var ipButton = ipCat.AddButton("DISPLAY IP", "", "Give this IP to joining players");
+            ipButton.OnPress += () =>
+            {
+                QuickMenuAPI.ShowNotice("* ! WARNING ! *", "This is your public IP.. ONLY SHARE WITH PEOPLE YOU TRUST!!", null, $"{IPRetriever.GetPublicIPAddress()}");
+            };
             var pinPage = hostCat.AddPage("ENTER FRIEND PIN", "", "PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);

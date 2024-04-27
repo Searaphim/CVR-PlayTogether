@@ -17,6 +17,7 @@ using MelonLoader.TinyJSON;
 using PlayTogetherMod.Utils;
 using System.Linq;
 using BTKUILib.UIObjects.Components;
+using System.Text.RegularExpressions;
 
 namespace PlayTogetherMod
 {
@@ -25,7 +26,6 @@ namespace PlayTogetherMod
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
         public const string MOONLIGHT_PATH = RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
     }
-
 
 
     public class Sunshine
@@ -58,46 +58,7 @@ namespace PlayTogetherMod
             RedirectStandardInput = true, //Makes the process stall if UseShellExecute isnt set to false
             RedirectStandardOutput = false //True somehow makes the process unable to receive our inputs
         };
-        //stdout will read "Please insert pin: " when ready to receive a pin through stdin
         //Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
-
-        public struct AppInfo
-        {
-            public string name;
-            public string cmd;
-            [DecodeAlias("auto-detach")]
-            public bool auto_detach;
-            [DecodeAlias("wait-all")]
-            public bool wait_all;
-            [DecodeAlias("image-path")]
-            public string image_path;
-        }
-
-        public class AppsConf
-        {
-            //[Exclude]
-            //public List<string> env;
-            public List<AppInfo> apps;
-        }
-
-        public AppsConf ReadAppsConf()
-        {
-            return JSON.Load(File.ReadAllText(APPSCONF_PATH)).Make<AppsConf>();
-        }
-
-        public AppsConf BuildAppInfo(string appPath)
-        {
-            var conf = ReadAppsConf();
-            //conf.env.Clear();
-            conf.apps.Clear();
-            conf.apps.Add(new AppInfo { name = Path.GetFileNameWithoutExtension(appPath), cmd = appPath });
-            return conf;
-        }
-
-        public void WriteAppsConf(AppsConf appsConf)
-        {
-            File.WriteAllText(APPSCONF_PATH, JSON.Dump(appsConf, EncodeOptions.PrettyPrint));
-        }
 
         public void WritePin(string pin)
         {
@@ -116,12 +77,11 @@ namespace PlayTogetherMod
                     firststartprocess.WaitForExit();
                 }
             }
-            //WriteAppsConf(BuildAppInfo(appPath)); //Broken
-            File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[]}"); //Temporary lazy fix for json issues
-            File.WriteAllText(APPSCONF_PATH2, @"{""env"":{},""apps"":[]}"); //Temporary lazy fix for json issues
+            string appstr = @"{""name"":""" + Path.GetFileNameWithoutExtension(appPath) + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
+            File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
+            File.WriteAllText(APPSCONF_PATH2, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);
             streamWriter = normalprocess.StandardInput;
-            //Console.ReadLine(); 
         }
 
         public void Stop()
@@ -156,7 +116,7 @@ namespace PlayTogetherMod
 
         private void MakeUI()
         {
-            //!! BTKUILib Bug here: Page() cannot have special characters for modName
+            //!! Page() cannot have special characters for modName
             _rootPage = new Page("CVRPlayTogether", "Root Page", true)
             {
                 MenuTitle = "CVR-PlayTogether Settings",
@@ -194,21 +154,6 @@ namespace PlayTogetherMod
                     if (filePath != "")
                     {
                         _sunshine.Run(filePath);
-                        //try
-                        //{
-                            //AppsConf appsconf;
-                            //JSON.MakeInto(JSON.Load(File.ReadAllText(APPSCONF_PATH)), out appsconf); //All of them throw an Exception about during invocation or whatevr
-                            //JSON.Load(File.ReadAllText(APPSCONF_PATH)).Make(out appsconf); 
-                            //appsconf = JSON.Load(File.ReadAllText(APPSCONF_PATH)).Make<AppsConf>(); //Make is the culprit
-                            //If it still doesnt work I can just interact with the json object directly instead...
-                        //}
-                        //catch (Exception ex)
-                        //{
-                        //    LoggerInstance.Msg(ex.Message);
-                        //}
-                        //_sunshine.ReadAppsConf(); //this stalls
-                        //LoggerInstance.Msg($"{_sunshine.BuildAppInfo(filePath)}");//Seems to stall
-                        LoggerInstance.Msg($"PROCESS_UNSTUCK");
                         pinPage.Disabled = false;
                     }
                     else

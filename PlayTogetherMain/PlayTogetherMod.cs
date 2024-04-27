@@ -28,24 +28,38 @@ namespace PlayTogetherMod
 
 
 
-    public class Sunshine : Process
+    public class Sunshine
     {
         public const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\sunshine.exe";
         public const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; //Multicast may or may not be necessary for multiple clients, idk.
-        public const string APPSCONF_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\assets\apps.json"; //Multicast may or may not be necessary for multiple clients, idk.
+        public const string APPSCONF_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\assets\apps.json";
+        public const string APPSCONF_PATH2 = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\apps.json";
         bool firstLaunch = true;
+        public Process firststartprocess;
+        public Process normalprocess;
+        StreamWriter streamWriter;
         //Apps file is only read on launch so sunshine needs to restart on edit. Probably the same for other confs.
         //channels=3 (3 distinct streams) //3 for 4 players
         //Configuration variables can be overwritten on the command line: "name=value" --> it can be usefull to set min_log_level=debug without modifying the configuration file
-        public Sunshine() : base()
+        ProcessStartInfo firststartinfo = new ProcessStartInfo {
+            FileName = EXE_PATH,
+            WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
+            Arguments = "--creds defaultusr defaultpwd",
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true
+        };
+        ProcessStartInfo normalstartinfo = new ProcessStartInfo
         {
-            StartInfo.FileName = EXE_PATH;
-            StartInfo.WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine";
-            StartInfo.Arguments = "-p -0 -1"; //PINs can be written to stdin
-            StartInfo.RedirectStandardInput = true;
-            //stdout will read "Please insert pin: " when ready to receive a pin through stdin
-            //Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
-        }
+            FileName = EXE_PATH,
+            WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
+            Arguments = "-p -0 -1",
+            UseShellExecute = false,
+            RedirectStandardInput = true, //Makes the process stall if UseShellExecute isnt set to false
+            RedirectStandardOutput = false //True somehow makes the process unable to receive our inputs
+        };
+        //stdout will read "Please insert pin: " when ready to receive a pin through stdin
+        //Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
 
         public struct AppInfo
         {
@@ -59,9 +73,10 @@ namespace PlayTogetherMod
             public string image_path;
         }
 
-        public struct AppsConf
+        public class AppsConf
         {
-            public List<string> env;
+            //[Exclude]
+            //public List<string> env;
             public List<AppInfo> apps;
         }
 
@@ -73,7 +88,7 @@ namespace PlayTogetherMod
         public AppsConf BuildAppInfo(string appPath)
         {
             var conf = ReadAppsConf();
-            conf.env.Clear();
+            //conf.env.Clear();
             conf.apps.Clear();
             conf.apps.Add(new AppInfo { name = Path.GetFileNameWithoutExtension(appPath), cmd = appPath });
             return conf;
@@ -84,23 +99,38 @@ namespace PlayTogetherMod
             File.WriteAllText(APPSCONF_PATH, JSON.Dump(appsConf, EncodeOptions.PrettyPrint));
         }
 
+        public void WritePin(string pin)
+        {
+            streamWriter.WriteLine(pin);
+            //streamWriter.Close();
+        }
+
         public void Run(string appPath)
         {
             if (firstLaunch)
             {
                 firstLaunch = false;
-                Start(StartInfo.FileName, "--creds defaultusr defaultpwd"); //Not a concern since we dont expose the interface to the internet
-                WaitForExit();
+                firststartprocess = Process.Start(firststartinfo); //Not a concern since we dont expose the interface to the internet
+                if (!firststartprocess.HasExited)
+                {
+                    firststartprocess.WaitForExit();
+                }
             }
-            WriteAppsConf(BuildAppInfo(appPath));
-            Start();
+            //WriteAppsConf(BuildAppInfo(appPath)); //Broken
+            File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[]}"); //Temporary lazy fix for json issues
+            File.WriteAllText(APPSCONF_PATH2, @"{""env"":{},""apps"":[]}"); //Temporary lazy fix for json issues
+            normalprocess = Process.Start(normalstartinfo);
+            streamWriter = normalprocess.StandardInput;
             //Console.ReadLine(); 
         }
 
         public void Stop()
         {
-            Close();
-            WaitForExit();
+            if (!normalprocess.HasExited)
+            {
+                normalprocess.Close();
+                normalprocess.WaitForExit();
+            }
         }
     }
 
@@ -163,7 +193,22 @@ namespace PlayTogetherMod
                     LoggerInstance.Msg($"Selected file: {filePath}");
                     if (filePath != "")
                     {
-                        _sunshine.Start();
+                        _sunshine.Run(filePath);
+                        //try
+                        //{
+                            //AppsConf appsconf;
+                            //JSON.MakeInto(JSON.Load(File.ReadAllText(APPSCONF_PATH)), out appsconf); //All of them throw an Exception about during invocation or whatevr
+                            //JSON.Load(File.ReadAllText(APPSCONF_PATH)).Make(out appsconf); 
+                            //appsconf = JSON.Load(File.ReadAllText(APPSCONF_PATH)).Make<AppsConf>(); //Make is the culprit
+                            //If it still doesnt work I can just interact with the json object directly instead...
+                        //}
+                        //catch (Exception ex)
+                        //{
+                        //    LoggerInstance.Msg(ex.Message);
+                        //}
+                        //_sunshine.ReadAppsConf(); //this stalls
+                        //LoggerInstance.Msg($"{_sunshine.BuildAppInfo(filePath)}");//Seems to stall
+                        LoggerInstance.Msg($"PROCESS_UNSTUCK");
                         pinPage.Disabled = false;
                     }
                     else

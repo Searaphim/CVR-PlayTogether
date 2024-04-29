@@ -24,7 +24,6 @@ namespace PlayTogetherMod
     public class SharedVars
     {
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
-        public const string MOONLIGHT_PATH = RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
     }
 
 
@@ -44,7 +43,7 @@ namespace PlayTogetherMod
         ProcessStartInfo firststartinfo = new ProcessStartInfo {
             FileName = EXE_PATH,
             WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
-            Arguments = "--creds defaultusr defaultpwd",
+            Arguments = "--creds defaultusr defaultpwd", //Not a concern since we dont expose the interface to the internet
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true
@@ -55,7 +54,7 @@ namespace PlayTogetherMod
             WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
             Arguments = "-p -0 -1",
             UseShellExecute = false,
-            RedirectStandardInput = true, //Makes the process stall if UseShellExecute isnt set to false
+            RedirectStandardInput = true,
             RedirectStandardOutput = false //True somehow makes the process unable to receive our inputs
         };
         //Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
@@ -71,7 +70,7 @@ namespace PlayTogetherMod
             if (firstLaunch)
             {
                 firstLaunch = false;
-                firststartprocess = Process.Start(firststartinfo); //Not a concern since we dont expose the interface to the internet
+                firststartprocess = Process.Start(firststartinfo);
                 if (!firststartprocess.HasExited)
                 {
                     firststartprocess.WaitForExit();
@@ -94,15 +93,54 @@ namespace PlayTogetherMod
         }
     }
 
+    public class Moonlight
+    {
+        public const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
+        public const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
+        public Process normalprocess;
+
+        public void PairWithHost(string lobbyCode)
+        {
+            Process pairprocess = Process.Start(new ProcessStartInfo()
+            {
+                FileName = EXE_PATH,
+                WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
+                Arguments = $"pair {LobbyCodeHandler.LobbyCodeToIP(lobbyCode)}",
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true
+            });
+        }
+
+        public void ClearInitFile() //Intended to prevent endless accumulation of expired clients
+        {
+            File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
+        }
+
+        public void Run()
+        {
+            //Would normally use the list command but it doesn't return anything when using the portable version of the apps. (could be either or both)
+            normalprocess = Process.Start(new ProcessStartInfo()
+            {
+                FileName = EXE_PATH,
+                WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true
+            });
+        }
+    }
+
     public class PlayTogether : MelonMod
     {
         Page _rootPage;
         public const string PROP_SCENE = "AdditiveContentScene";
-        //Root working dir at runtime is 'ChilloutVR'
         public const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
         public const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
         Sunshine _sunshine;
+        Moonlight _moonlight;
         string pinInputs = "";
+        string targetLobbyCode = "";
 
 
         private void UnpackResources()
@@ -142,14 +180,17 @@ namespace PlayTogetherMod
             };
 
             var hostCat = _rootPage.AddCategory("Game Hosting");
-            var ipPage = hostCat.AddPage("IP INFO", "", "ONLY SHARE WITH TRUSTED PLAYERS", "CVRPlayTogether");
-            var ipCat = ipPage.AddCategory("Host's (YOUR) Internet IP");
-            var ipButton = ipCat.AddButton("DISPLAY IP", "", "Give this IP to joining players");
-            ipButton.OnPress += () =>
+            var clientCat = _rootPage.AddCategory("Join Hosted Game");
+            var viewCodeButton = hostCat.AddButton("My Lobby Code", "", "View your unique Host Lobby Code");
+            viewCodeButton.Disabled = true;
+            viewCodeButton.OnPress += () =>
             {
-                QuickMenuAPI.ShowNotice("* ! WARNING ! *", "This is your public IP.. ONLY SHARE WITH PEOPLE YOU TRUST!!", null, $"{IPRetriever.GetPublicIPAddress()}");
+                string lobbyCode = LobbyCodeHandler.GenLobbyCode();
+                LoggerInstance.Msg($"LobbyCode: {lobbyCode}");
+                QuickMenuAPI.ShowNotice("Your Lobby Code", "This is the code players must use to join your lobby if you are Hosting. *The code expires every 1-2 hours!*", null, lobbyCode);
+                LoggerInstance.Msg($"Parsed IP: {LobbyCodeHandler.LobbyCodeToIP(lobbyCode)}");
             };
-            var pinPage = hostCat.AddPage("ENTER FRIEND PIN", "", "PIN", "CVRPlayTogether");
+            var pinPage = hostCat.AddPage("Friend pairing", "", "Enter pairing PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);
             hostToggle.OnValueUpdated += b =>
@@ -162,6 +203,7 @@ namespace PlayTogetherMod
                     {
                         _sunshine.Run(filePath);
                         pinPage.Disabled = false;
+                        viewCodeButton.Disabled = false;
                     }
                     else
                     {
@@ -173,35 +215,85 @@ namespace PlayTogetherMod
                     _sunshine.Stop();
                     LoggerInstance.Msg($"Hosting terminated.");
                     pinPage.Disabled = true;
+                    viewCodeButton.Disabled = true;
                 }
             };
-            var pinKeyboard = pinPage.AddCategory("PIN KEYBOARD");
-            Category sendCat;
-            sendCat = pinPage.AddCategory("Enter PIN");
-            var sendButton = sendCat.AddButton("", "", "Validate a friend's PIN");
-            sendButton.OnPress += () =>
+            var pinNumpad = pinPage.AddCategory("PIN KEYBOARD");
+            Category sendPinCat;
+            sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
+            var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
+            sendPinButton.OnPress += () =>
             {
                 _sunshine.WritePin(pinInputs);
-                pinKeyboard.Disabled = false;
+                pinNumpad.Disabled = false;
                 pinInputs = "";
-                sendButton.ButtonText = pinInputs;
+                sendPinButton.ButtonText = pinInputs;
+            };
+            var clearPinButton = sendPinCat.AddButton("Clear", "", "Clear PIN");
+            clearPinButton.OnPress += () =>
+            {
+                pinNumpad.Disabled = false;
+                pinInputs = "";
+                sendPinButton.ButtonText = pinInputs;
             };
             List<Button> pinButtons = new List<Button>();
             for(int i =0; i < 10; i++)
             {
                 int buttonNumber = i;
-                pinButtons.Add(pinKeyboard.AddButton(buttonNumber.ToString(), "", ""));
+                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", ""));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
                     if (pinInputs.Length < 4)
                     {
                         pinInputs = pinInputs + buttonNumber.ToString();
-                        sendButton.ButtonText = pinInputs;
+                        sendPinButton.ButtonText = pinInputs;
                     }
                     if (pinInputs.Length == 4)
                     {
-                        sendButton.ButtonText = pinInputs;
-                        pinKeyboard.Disabled = true;
+                        sendPinButton.ButtonText = pinInputs;
+                        pinNumpad.Disabled = true;
+                    }
+                };
+            }
+
+            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Pair yourself with a Host", "CVRPlayTogether");
+            var joinButton = clientCat.AddButton("Join Game", "", "Attempt to join game");
+            joinButton.OnPress += () => {
+                _moonlight.Run();
+            };
+            var lobbyNumpad = pairPage.AddCategory("Enter lobby code..");
+            var confirmCat = pairPage.AddCategory("Connect to lobby");
+            var connectButton = confirmCat.AddButton("", "", "Attempt connection with Host");
+            connectButton.OnPress += () =>
+            {
+                _moonlight.PairWithHost(targetLobbyCode);
+                lobbyNumpad.Disabled = false;
+                targetLobbyCode = "";
+                connectButton.ButtonText = targetLobbyCode;
+            };
+            var clearLobbyCodeButton = confirmCat.AddButton("Clear", "", "Clear Lobby code");
+            clearLobbyCodeButton.OnPress += () =>
+            {
+                lobbyNumpad.Disabled = false;
+                targetLobbyCode = "";
+                connectButton.ButtonText = targetLobbyCode;
+            };
+            List<Button> lobbyCodeButtons = new List<Button>();
+            for (int i = 0; i < 10; i++)
+            {
+                int buttonNumber = i;
+                lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "", ""));
+                lobbyCodeButtons[buttonNumber].OnPress += () =>
+                {
+                    if (targetLobbyCode.Length < 10)
+                    {
+                        targetLobbyCode = targetLobbyCode + buttonNumber.ToString();
+                        connectButton.ButtonText = targetLobbyCode;
+                    }
+                    if (targetLobbyCode.Length == 10)
+                    {
+                        connectButton.ButtonText = targetLobbyCode;
+                        lobbyNumpad.Disabled = true;
                     }
                 };
             }
@@ -217,6 +309,8 @@ namespace PlayTogetherMod
             //propWhitelist.Add(assembly.GetType("uWindowCapture.UwcWindowTexture"));
 
             _sunshine = new Sunshine();
+            _moonlight = new Moonlight();
+            _moonlight.ClearInitFile();
             MakeUI();
         }
 

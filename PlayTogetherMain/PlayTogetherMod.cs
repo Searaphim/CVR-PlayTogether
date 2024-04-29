@@ -18,6 +18,7 @@ using PlayTogetherMod.Utils;
 using System.Linq;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 
 namespace PlayTogetherMod
 {
@@ -25,7 +26,6 @@ namespace PlayTogetherMod
     {
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
     }
-
 
     public class Sunshine
     {
@@ -99,13 +99,13 @@ namespace PlayTogetherMod
         public const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
         public Process normalprocess;
 
-        public void PairWithHost(string lobbyCode)
+        public void PairWithHost(string lobbyCode, string pairPin)
         {
             Process pairprocess = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
-                Arguments = $"pair {LobbyCodeHandler.LobbyCodeToIP(lobbyCode)}",
+                Arguments = $"pair {LobbyCodeHandler.LobbyCodeToIP(lobbyCode)} --pin {pairPin}",
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true
@@ -142,7 +142,6 @@ namespace PlayTogetherMod
         string pinInputs = "";
         string targetLobbyCode = "";
 
-
         private void UnpackResources()
         {
             ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
@@ -150,6 +149,12 @@ namespace PlayTogetherMod
             zip.Dispose();
             zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
             zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER, true);
+        }
+
+        private string GeneratePairingPin()
+        {
+            var random = new System.Random();
+            return random.Next(10000).ToString("D4");
         }
 
         private void MakeUI()
@@ -186,9 +191,7 @@ namespace PlayTogetherMod
             viewCodeButton.OnPress += () =>
             {
                 string lobbyCode = LobbyCodeHandler.GenLobbyCode();
-                LoggerInstance.Msg($"LobbyCode: {lobbyCode}");
                 QuickMenuAPI.ShowNotice("Your Lobby Code", "This is the code players must use to join your lobby if you are Hosting. *The code expires every 1-2 hours!*", null, lobbyCode);
-                LoggerInstance.Msg($"Parsed IP: {LobbyCodeHandler.LobbyCodeToIP(lobbyCode)}");
             };
             var pinPage = hostCat.AddPage("Friend pairing", "", "Enter pairing PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
@@ -266,7 +269,9 @@ namespace PlayTogetherMod
             var connectButton = confirmCat.AddButton("", "", "Attempt connection with Host");
             connectButton.OnPress += () =>
             {
-                _moonlight.PairWithHost(targetLobbyCode);
+                var pairingPin = GeneratePairingPin();
+                QuickMenuAPI.ShowNotice("Pairing Pin", $"The host must enter this pin to approve your connection: {pairingPin}", null);
+                _moonlight.PairWithHost(targetLobbyCode, pairingPin);
                 lobbyNumpad.Disabled = false;
                 targetLobbyCode = "";
                 connectButton.ButtonText = targetLobbyCode;

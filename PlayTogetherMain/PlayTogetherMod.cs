@@ -125,12 +125,11 @@ namespace PlayTogetherMod
             IntPtr hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             if (hConsoleOutput == IntPtr.Zero || hConsoleOutput == (IntPtr)(-1))
             {
-                Console.WriteLine("Error: Failed to get console output handle.");
                 return null;
             }
 
             // Define the buffer size
-            const int bufferSize = 4096;
+            const int bufferSize = 200000;
 
             // Create a buffer to store the console output
             StringBuilder buffer = new StringBuilder(bufferSize);
@@ -159,7 +158,7 @@ namespace PlayTogetherMod
         public void PairWithHost(string lobbyCode, string pairPin)
         {
             //_lobbyCode = lobbyCode; //uncomment after debugging
-            _lobbyCode = "2817135310";
+            _lobbyCode = "2817214254";
             pairPin = "1234"; //remove after debugging
             Process pairprocess = Process.Start(new ProcessStartInfo()
             {
@@ -178,7 +177,7 @@ namespace PlayTogetherMod
                 File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
         }
 
-        private string? GetHostAppTitle(string host)
+        public string? GetHostAppTitle(string host)
         {
             using (var dummyprocess = Process.Start(new ProcessStartInfo()
             {
@@ -233,7 +232,7 @@ namespace PlayTogetherMod
         public void Run()
         {
             var host = LobbyCodeHandler.LobbyCodeToIP(_lobbyCode);
-            StartSession(host, GetHostAppTitle(host));
+            //StartSession(host, GetHostAppTitle(host));
         }
 
         public void Stop(Process processToStop)
@@ -380,8 +379,20 @@ namespace PlayTogetherMod
             {
                 if(b == true)
                 {
-                    _moonlight.Run();
-                    LoggerInstance.Msg($"Survived Moonlight Run");
+                    //_moonlight.Run();
+                    var output = _moonlight.GetHostAppTitle("192.168.2.10");
+                    if(output == null)
+                    {
+                        LoggerInstance.Msg($"NULL");
+                    }
+                    else if(output == "")
+                    {
+                        LoggerInstance.Msg($"EMPTY");
+                    }
+                    else
+                    {
+                        LoggerInstance.Msg($"Survived Moonlight Run with: {output}");
+                    }
                 }
                 else
                 {

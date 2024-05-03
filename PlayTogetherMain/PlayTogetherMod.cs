@@ -15,12 +15,8 @@ using System.IO;
 using System.Diagnostics;
 using MelonLoader.TinyJSON;
 using PlayTogetherMod.Utils;
-using System.Linq;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
-using System.Security.Cryptography;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace PlayTogetherMod
 {
@@ -31,24 +27,16 @@ namespace PlayTogetherMod
 
     public class Sunshine
     {
-        public const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\sunshine.exe";
-        public const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; // Multicast may or may not be necessary for multiple clients, idk.
-        public const string APPSDEFCONF_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\assets\apps.json";
-        public const string APPSCONF_DIR = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config";
-        public const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
-        public Process normalprocess;
-        StreamWriter streamWriter;
+        private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\sunshine.exe";
+        private const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; // Multicast may or may not be necessary for multiple clients, idk.
+        private const string APPSDEFCONF_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\assets\apps.json";
+        private const string APPSCONF_DIR = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config";
+        private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
+        private Process normalprocess;
+        private StreamWriter streamWriter;
         // Apps file is only read on launch so sunshine needs to restart on edit. Probably the same for other confs.
         // channels=3 (3 distinct streams) //3 for 4 players
         // Configuration variables can be overwritten on the command line: "name=value" --> it can be usefull to set min_log_level=debug without modifying the configuration file
-        ProcessStartInfo firststartinfo = new ProcessStartInfo {
-            FileName = EXE_PATH,
-            WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
-            Arguments = "--creds defaultusr defaultpwd", //Not a concern since we dont expose the interface to the internet
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true
-        };
         ProcessStartInfo normalstartinfo = new ProcessStartInfo
         {
             FileName = EXE_PATH,
@@ -60,13 +48,12 @@ namespace PlayTogetherMod
         };
         // Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
 
-        public void WritePin(string pin)
+        public void SendPin(string pin)
         {
             streamWriter.WriteLine(pin);
-            //streamWriter.Close();
         }
 
-        public void FlushConfigs()
+        private void FlushConfigs()
         {
             if(Directory.Exists(APPSCONF_DIR))
                 Directory.Delete(APPSCONF_DIR, true);
@@ -93,73 +80,19 @@ namespace PlayTogetherMod
 
     public class Moonlight
     {
-        public const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
-        public const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
-        public Process sessionProc;
-        string _lobbyCode = "";
+        private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
+        private const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
+        private Process _sessionProc;
+        private string _lobbyCode = "";
 
-        // Import the required WinAPI functions to Pinvoke
-        // This workaround is needed for reading Moonlight CLI's outputs
-        //  as it redirects it's stdout asynchronously to handle it's log writes right before shutdown.
-        //  This prevents us from capturing the info we need unless we directly read the console output buffer after the fact.
-        //  (which is what the PInvoke is for)
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern IntPtr GetStdHandle(int nStdHandle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern bool ReadConsoleOutputCharacter(IntPtr hConsoleOutput, [Out] StringBuilder lpCharacter, uint nLength, COORD dwReadCoord, out uint lpNumberOfCharsRead);
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct COORD
+        public string LobbyCode
         {
-            public short X;
-            public short Y;
+            get { return _lobbyCode; }
+            set { _lobbyCode = value; }
         }
 
-        const int STD_OUTPUT_HANDLE = -11;
-
-        // Function to read the console output
-        static string? ReadConsoleOutput()
+        public void PairWithHost(string pairPin)
         {
-            // Get the handle to the standard output console buffer
-            IntPtr hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-            if (hConsoleOutput == IntPtr.Zero || hConsoleOutput == (IntPtr)(-1))
-            {
-                return null;
-            }
-
-            // Define the buffer size
-            const int bufferSize = 200000;
-
-            // Create a buffer to store the console output
-            StringBuilder buffer = new StringBuilder(bufferSize);
-
-            // Read the console output into the buffer
-            uint charsRead;
-            COORD readCoord = new COORD { X = 0, Y = 0 };
-            if (!ReadConsoleOutputCharacter(
-                hConsoleOutput,
-                buffer,
-                (uint)bufferSize,
-                readCoord,
-                out charsRead))
-            {
-                //Failed to read console output
-                return null;
-            }
-
-            // Trim the StringBuilder to the actual number of characters read
-            buffer.Length = (int)charsRead;
-
-            // Return the console output as a string
-            return buffer.ToString();
-        }
-
-        public void PairWithHost(string lobbyCode, string pairPin)
-        {
-            //_lobbyCode = lobbyCode; //uncomment after debugging
-            _lobbyCode = "2817214254";
-            pairPin = "1234"; //remove after debugging
             Process pairprocess = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
@@ -177,84 +110,47 @@ namespace PlayTogetherMod
                 File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
         }
 
-        public string? GetHostAppTitle(string host)
+        private void StartSession(string host)
         {
-            using (var dummyprocess = Process.Start(new ProcessStartInfo()
-            {
-                FileName = EXE_PATH,
-                WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
-                Arguments = $"pair {host}",
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
-            })){
-                dummyprocess.WaitForExit(); // Might never happen until user clicks.. Manually stopping might be necessary
-            };
-            //Stop(dummyprocess);
-            using (var listprocess = Process.Start(new ProcessStartInfo()
-            {
-                FileName = EXE_PATH,
-                WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
-                Arguments = $"list {host}",
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
-            }))
-            {
-                if (listprocess == null)
-                {
-                    // Error: Failed to start Moonlight process.
-                    return null;
-                }
-                listprocess.WaitForExit();
-                return ReadConsoleOutput(); //Returns null 
-            };
-        }
-
-        public void StartSession(string host, string? hostAppTitle)
-        {
-            if((hostAppTitle == null) || (hostAppTitle == ""))
+            if(host == "")
             {
                 return;
             }
-            sessionProc = Process.Start(new ProcessStartInfo()
+            _sessionProc = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
-                Arguments = @$"stream {host} ""{hostAppTitle}""",
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true
             });
-            //sessionProc.WaitForExit();
         }
 
         public void Run()
         {
-            var host = LobbyCodeHandler.LobbyCodeToIP(_lobbyCode);
-            //StartSession(host, GetHostAppTitle(host));
+            StartSession(LobbyCodeHandler.LobbyCodeToIP(_lobbyCode));
         }
 
-        public void Stop(Process processToStop)
+        public void Stop()
         {
-            if (!processToStop.HasExited)
+            if (!_sessionProc.HasExited)
             {
-                processToStop.Kill();
-                processToStop.WaitForExit();
+                _sessionProc.Kill();
+                _sessionProc.WaitForExit();
             }
         }
     }
 
     public class PlayTogether : MelonMod
     {
-        Page _rootPage;
-        public const string PROP_SCENE = "AdditiveContentScene";
-        public const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
-        public const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
-        Sunshine _sunshine;
-        Moonlight _moonlight;
-        string pinInputs = "";
-        string targetLobbyCode = "";
+        private Page _rootPage;
+        private const string PROP_SCENE = "AdditiveContentScene";
+        private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
+        private const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
+        private Sunshine _sunshine;
+        private Moonlight _moonlight;
+        private string _pinInputs = "";
+        private string _targetLobbyCode = "";
 
         private void UnpackResources()
         {
@@ -341,17 +237,17 @@ namespace PlayTogetherMod
             var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
             sendPinButton.OnPress += () =>
             {
-                _sunshine.WritePin("1234");// _sunshine.WritePin(pinInputs); //Uncomment after debug
+                _sunshine.SendPin(_pinInputs);
                 pinNumpad.Disabled = false;
-                pinInputs = "";
-                sendPinButton.ButtonText = pinInputs;
+                _pinInputs = "";
+                sendPinButton.ButtonText = _pinInputs;
             };
             var clearPinButton = sendPinCat.AddButton("Clear", "", "Clear PIN");
             clearPinButton.OnPress += () =>
             {
                 pinNumpad.Disabled = false;
-                pinInputs = "";
-                sendPinButton.ButtonText = pinInputs;
+                _pinInputs = "";
+                sendPinButton.ButtonText = _pinInputs;
             };
             List<Button> pinButtons = new List<Button>();
             for(int i =0; i < 10; i++)
@@ -360,14 +256,14 @@ namespace PlayTogetherMod
                 pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", ""));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
-                    if (pinInputs.Length < 4)
+                    if (_pinInputs.Length < 4)
                     {
-                        pinInputs = pinInputs + buttonNumber.ToString();
-                        sendPinButton.ButtonText = pinInputs;
+                        _pinInputs = _pinInputs + buttonNumber.ToString();
+                        sendPinButton.ButtonText = _pinInputs;
                     }
-                    if (pinInputs.Length == 4)
+                    if (_pinInputs.Length == 4)
                     {
-                        sendPinButton.ButtonText = pinInputs;
+                        sendPinButton.ButtonText = _pinInputs;
                         pinNumpad.Disabled = true;
                     }
                 };
@@ -379,24 +275,11 @@ namespace PlayTogetherMod
             {
                 if(b == true)
                 {
-                    //_moonlight.Run();
-                    var output = _moonlight.GetHostAppTitle("192.168.2.10");
-                    if(output == null)
-                    {
-                        LoggerInstance.Msg($"NULL");
-                    }
-                    else if(output == "")
-                    {
-                        LoggerInstance.Msg($"EMPTY");
-                    }
-                    else
-                    {
-                        LoggerInstance.Msg($"Survived Moonlight Run with: {output}");
-                    }
+                    _moonlight.Run();
                 }
                 else
                 {
-                    //_moonlight.Stop();
+                    _moonlight.Stop();
                 }
             };
             var lobbyNumpad = pairPage.AddCategory("Enter lobby code..");
@@ -404,19 +287,17 @@ namespace PlayTogetherMod
             var connectButton = confirmCat.AddButton("", "", "Attempt connection with Host");
             connectButton.OnPress += () =>
             {
-                var pairingPin = "1234"; //GeneratePairingPin(); //uncomment after debug
+                var pairingPin = GeneratePairingPin();
                 QuickMenuAPI.ShowNotice("Pairing Pin", $"The host must enter this pin to approve your connection: {pairingPin}", null);
-                _moonlight.PairWithHost(targetLobbyCode, pairingPin);
-                //lobbyNumpad.Disabled = false;
-                //targetLobbyCode = "";
-                //connectButton.ButtonText = targetLobbyCode;
+                _moonlight.LobbyCode = _targetLobbyCode;
+                _moonlight.PairWithHost(pairingPin);
             };
             var clearLobbyCodeButton = confirmCat.AddButton("Clear", "", "Clear Lobby code");
             clearLobbyCodeButton.OnPress += () =>
             {
                 lobbyNumpad.Disabled = false;
-                targetLobbyCode = "";
-                connectButton.ButtonText = targetLobbyCode;
+                _targetLobbyCode = "";
+                connectButton.ButtonText = _targetLobbyCode;
             };
             List<Button> lobbyCodeButtons = new List<Button>();
             for (int i = 0; i < 10; i++)
@@ -425,14 +306,14 @@ namespace PlayTogetherMod
                 lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "", ""));
                 lobbyCodeButtons[buttonNumber].OnPress += () =>
                 {
-                    if (targetLobbyCode.Length < 10)
+                    if (_targetLobbyCode.Length < 10)
                     {
-                        targetLobbyCode = targetLobbyCode + buttonNumber.ToString();
-                        connectButton.ButtonText = targetLobbyCode;
+                        _targetLobbyCode = _targetLobbyCode + buttonNumber.ToString();
+                        connectButton.ButtonText = _targetLobbyCode;
                     }
-                    if (targetLobbyCode.Length == 10)
+                    if (_targetLobbyCode.Length == 10)
                     {
-                        connectButton.ButtonText = targetLobbyCode;
+                        connectButton.ButtonText = _targetLobbyCode;
                         lobbyNumpad.Disabled = true;
                     }
                 };
@@ -453,11 +334,5 @@ namespace PlayTogetherMod
             _moonlight.ClearInitFile();
             MakeUI();
         }
-
-        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
-        {
-            LoggerInstance.Msg($"Scene {sceneName} with build index {buildIndex} has been loaded!");
-        }
-
     }
 }

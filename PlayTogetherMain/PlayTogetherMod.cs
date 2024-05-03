@@ -18,6 +18,7 @@ using PlayTogetherMod.Utils;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
 
+
 namespace PlayTogetherMod
 {
     public class SharedVars

@@ -254,7 +254,7 @@ namespace PlayTogetherMod
             for(int i =0; i < 10; i++)
             {
                 int buttonNumber = i;
-                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", ""));
+                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
                     if (_pinInputs.Length < 4)
@@ -304,7 +304,7 @@ namespace PlayTogetherMod
             for (int i = 0; i < 10; i++)
             {
                 int buttonNumber = i;
-                lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "", ""));
+                lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 lobbyCodeButtons[buttonNumber].OnPress += () =>
                 {
                     if (_targetLobbyCode.Length < 10)

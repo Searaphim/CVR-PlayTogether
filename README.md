@@ -64,3 +64,7 @@ Steps
 - You can find the resulting DLL in `'PlayTogetherMain/ILMergeOut'`. That is the mod to be loaded in the ChilloutVR client via MelonLoader. (Put it in `<ChilloutVR path>/Mods`)
 - If you build your own CVR-PlayTogether dll you also need to do the same for the prop and use your own DLL otherwise the mod won't work due to signature differences.
 		See the [instructions](https://github.com/Searaphim/CCK-PlayTogether)
+
+- Copy/Paste (from the CCK-PlayTogether project to the CVR-PlayTogether project)
+  `CCK-PlayTogether\Assets\uWindowCapture\Plugins\x86_64\uWindowCapture.dll`
+	  into `PlayTogetherMain\resources` 

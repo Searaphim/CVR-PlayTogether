@@ -17,6 +17,7 @@ using MelonLoader.TinyJSON;
 using PlayTogetherMod.Utils;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 
 
 namespace PlayTogetherMod
@@ -24,6 +25,7 @@ namespace PlayTogetherMod
     public class SharedVars
     {
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
+        public const string UWINDOWCAPTURE_DLL_PATH = RESOURCE_FOLDER + @"\uWindowCapture.dll";
     }
 
     public class Sunshine
@@ -148,6 +150,7 @@ namespace PlayTogetherMod
         private const string PROP_SCENE = "AdditiveContentScene";
         private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
         private const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
+        private const string UWINDOWCAPTURE_RESOURCE = "CVRPlayTogether.resources.uWindowCapture.dll";
         private Sunshine _sunshine;
         private Moonlight _moonlight;
         private string _pinInputs = "";
@@ -160,6 +163,14 @@ namespace PlayTogetherMod
             zip.Dispose();
             zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
             zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER, true);
+            byte[] dllBytes = null;
+            using (Stream stm = Assembly.GetExecutingAssembly().GetManifestResourceStream(UWINDOWCAPTURE_RESOURCE))
+            {
+                dllBytes = new byte[(int)stm.Length];
+                stm.Read(dllBytes, 0, (int)stm.Length);
+            }
+            File.WriteAllBytes(SharedVars.UWINDOWCAPTURE_DLL_PATH, dllBytes);
+            NativeLibrary.LoadLib(SharedVars.UWINDOWCAPTURE_DLL_PATH);
         }
 
         private string GeneratePairingPin()
@@ -324,11 +335,10 @@ namespace PlayTogetherMod
         public override void OnInitializeMelon()
         {
             UnpackResources();
+
             //Our CCK Prop contains a custom MonoBehavior script component. We force-allow it here.
             var propWhitelist = SharedFilter._spawnableWhitelist;
             propWhitelist.Add(typeof(uWindowCapture.UwcWindowTexture));
-            //Assembly assembly = Assembly.GetAssembly(typeof(uWindowCapture.UwcWindowTexture));
-            //propWhitelist.Add(assembly.GetType("uWindowCapture.UwcWindowTexture"));
 
             _sunshine = new Sunshine();
             _moonlight = new Moonlight();

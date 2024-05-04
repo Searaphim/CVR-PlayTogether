@@ -55,6 +55,12 @@ Steps
 - copy and paste all the DLLs from `'<ChilloutVR path>/MelonLoader/net35/'` into `'PlayTogetherMain/libs'`
 - get latest BTKUILib.dll from 'https://github.com/Searaphim/BTKUILib/releases' and paste it into `'PlayTogetherMain/libs'` (or build it yourself and do the same)
 - delete everything in BTKUILib folder once done (to avoid compilation issues)
+- If you build your own CVR-PlayTogether dll you also need to do the same for the prop and use your own DLL otherwise the mod won't work due to signature differences.
+		See the [instructions](https://github.com/Searaphim/CCK-PlayTogether)
+
+- Copy/Paste (from the CCK-PlayTogether project to the CVR-PlayTogether project)
+  `CCK-PlayTogether\Assets\uWindowCapture\Plugins\x86_64\uWindowCapture.dll`
+	  into `PlayTogetherMain\resources` 
 - build the PlayTogetherMain project with Visual Studio
 - Open a developer command prompt: `Tools->Command Line->Developer Command Line`
 - Enter the following in it: 
@@ -62,9 +68,4 @@ Steps
 		msbuild /t:ILMerge 
 
 - You can find the resulting DLL in `'PlayTogetherMain/ILMergeOut'`. That is the mod to be loaded in the ChilloutVR client via MelonLoader. (Put it in `<ChilloutVR path>/Mods`)
-- If you build your own CVR-PlayTogether dll you also need to do the same for the prop and use your own DLL otherwise the mod won't work due to signature differences.
-		See the [instructions](https://github.com/Searaphim/CCK-PlayTogether)
 
-- Copy/Paste (from the CCK-PlayTogether project to the CVR-PlayTogether project)
-  `CCK-PlayTogether\Assets\uWindowCapture\Plugins\x86_64\uWindowCapture.dll`
-	  into `PlayTogetherMain\resources` 

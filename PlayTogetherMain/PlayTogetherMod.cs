@@ -86,7 +86,9 @@ namespace PlayTogetherMod
         private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
         private const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
         private Process _sessionProc;
+        private Process _pairprocess = null;
         private string _lobbyCode = "";
+        private string _lobbyDestination = "";
 
         public string LobbyCode
         {
@@ -96,11 +98,13 @@ namespace PlayTogetherMod
 
         public void PairWithHost(string pairPin)
         {
-            Process pairprocess = Process.Start(new ProcessStartInfo()
+            StopPairing();
+            _lobbyDestination = LobbyCodeHandler.LobbyCodeToIP(_lobbyCode);
+            _pairprocess = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
-                Arguments = $"pair {LobbyCodeHandler.LobbyCodeToIP(_lobbyCode)} --pin {pairPin}",
+                Arguments = $"pair {_lobbyDestination} --pin {pairPin}",
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true
@@ -131,16 +135,33 @@ namespace PlayTogetherMod
 
         public void Run()
         {
-            StartSession(LobbyCodeHandler.LobbyCodeToIP(_lobbyCode));
+            StartSession(_lobbyDestination);
         }
 
-        public void Stop()
+        private bool StopProcess(Process proc)
         {
-            if (!_sessionProc.HasExited)
+            if (_pairprocess != null)
             {
-                _sessionProc.Kill();
-                _sessionProc.WaitForExit();
+                if (!proc.HasExited)
+                {
+                    proc.Kill();
+                    proc.WaitForExit();
+                }
+                return true;
             }
+            return false;
+        }
+
+        public void StopPairing()
+        {
+            if (StopProcess(_pairprocess))
+                _pairprocess.Dispose();
+        }
+
+        public void StopSession()
+        {
+            if(StopProcess(_sessionProc))
+                _sessionProc.Dispose();
         }
     }
 
@@ -154,7 +175,7 @@ namespace PlayTogetherMod
         private Sunshine _sunshine;
         private Moonlight _moonlight;
         private string _pinInputs = "";
-        private string _targetLobbyCode = "";
+        private string _tempTargetLobbyCode = "";
 
         private void UnpackResources()
         {
@@ -291,7 +312,7 @@ namespace PlayTogetherMod
                 }
                 else
                 {
-                    _moonlight.Stop();
+                    _moonlight.StopSession();
                 }
             };
             var lobbyNumpad = pairPage.AddCategory("Enter lobby code..");
@@ -301,15 +322,15 @@ namespace PlayTogetherMod
             {
                 var pairingPin = GeneratePairingPin();
                 QuickMenuAPI.ShowNotice("Pairing Pin", $"The host must enter this pin to approve your connection: {pairingPin}", null);
-                _moonlight.LobbyCode = _targetLobbyCode;
+                _moonlight.LobbyCode = connectButton.ButtonText;
                 _moonlight.PairWithHost(pairingPin);
             };
             var clearLobbyCodeButton = confirmCat.AddButton("Clear", "", "Clear Lobby code");
             clearLobbyCodeButton.OnPress += () =>
             {
                 lobbyNumpad.Disabled = false;
-                _targetLobbyCode = "";
-                connectButton.ButtonText = _targetLobbyCode;
+                _tempTargetLobbyCode = "";
+                connectButton.ButtonText = "";
             };
             List<Button> lobbyCodeButtons = new List<Button>();
             for (int i = 0; i < 10; i++)
@@ -318,14 +339,14 @@ namespace PlayTogetherMod
                 lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 lobbyCodeButtons[buttonNumber].OnPress += () =>
                 {
-                    if (_targetLobbyCode.Length < 10)
+                    if (_tempTargetLobbyCode.Length < 10)
                     {
-                        _targetLobbyCode = _targetLobbyCode + buttonNumber.ToString();
-                        connectButton.ButtonText = _targetLobbyCode;
+                        _tempTargetLobbyCode = _tempTargetLobbyCode + buttonNumber.ToString();
+                        connectButton.ButtonText = _tempTargetLobbyCode;
                     }
-                    if (_targetLobbyCode.Length == 10)
+                    if (_tempTargetLobbyCode.Length == 10)
                     {
-                        connectButton.ButtonText = _targetLobbyCode;
+                        connectButton.ButtonText = _tempTargetLobbyCode;
                         lobbyNumpad.Disabled = true;
                     }
                 };

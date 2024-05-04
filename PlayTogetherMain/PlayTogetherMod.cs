@@ -25,7 +25,7 @@ namespace PlayTogetherMod
     public class SharedVars
     {
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
-        public const string UWINDOWCAPTURE_DLL_PATH = RESOURCE_FOLDER + @"\uWindowCapture.dll";
+        public const string UWINDOWCAPTURE_DLL_PATH = @"ChilloutVR_Data\Plugins\x86_64\uWindowCapture.dll";
     }
 
     public class Sunshine

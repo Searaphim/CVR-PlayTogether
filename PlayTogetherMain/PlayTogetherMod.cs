@@ -17,7 +17,10 @@ using MelonLoader.TinyJSON;
 using PlayTogetherMod.Utils;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
-using System.Security.Cryptography;
+using System.Net.Http;
+using System.Net;
+using System.Text;
+using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Interop.InteropMethods;
 
 
 namespace PlayTogetherMod
@@ -37,6 +40,10 @@ namespace PlayTogetherMod
         private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
         private Process normalprocess;
         private StreamWriter streamWriter;
+        private string _url = "https://localhost:47990/api/pin";
+        private string _usr = "defaultusr";
+        private string _pwd = "defaultpwd";
+
         // Apps file is only read on launch so sunshine needs to restart on edit. Probably the same for other confs.
         // channels=3 (3 distinct streams) //3 for 4 players
         // Configuration variables can be overwritten on the command line: "name=value" --> it can be usefull to set min_log_level=debug without modifying the configuration file
@@ -44,16 +51,52 @@ namespace PlayTogetherMod
         {
             FileName = EXE_PATH,
             WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
-            Arguments = "-p -0",
+            Arguments = "-p", //Arguments = "-p -0",
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = false
         };
         // Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
 
+        public void CreateUser()
+        {
+            ProcessStartInfo credsProc = new ProcessStartInfo
+            {
+                FileName = EXE_PATH,
+                WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
+                Arguments = $"--creds {_usr} {_pwd}", //Arguments = "-p -0",
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = false
+            };
+            Process shortProc = Process.Start(credsProc); //Not a concern since we dont expose the interface to the internet
+            shortProc.WaitForExit();
+            shortProc.Dispose();
+        }
+
         public void SendPin(string pin)
         {
-            streamWriter.WriteLine(pin);
+            //streamWriter.WriteLine(pin);
+            var payload = @"{""mimeType"":""text/plain;charset=UTF-8"",""text"":""{\""" + pin + @"\"":\""1234\""}""}"; //Returns "error": "No such node (pin)". Not that simple..
+            var client = new HttpClient(new HttpClientHandler { Credentials = new NetworkCredential(_usr,_pwd)});
+            var request = new HttpRequestMessage(HttpMethod.Post, _url)
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "text/plain")
+            };
+            File.WriteAllText("REQUESTLOG.txt",request.Content.ReadAsStringAsync().Result);
+            HttpResponseMessage response = client.SendAsync(request).Result;
+            File.WriteAllText("REPLYLOG.txt", response.Content.ReadAsStringAsync().Result);
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                MelonLogger.Msg("HTTP REQ OK");
+                File.WriteAllText("OKLOG.txt", "OK");
+            }
+            else
+            {
+                MelonLogger.Msg("HTTP REQ FAIL");
+                File.WriteAllText("OKLOG.txt", "BAD");
+            }
+            client.Dispose();
         }
 
         private void FlushConfigs()
@@ -65,6 +108,7 @@ namespace PlayTogetherMod
         public void Run(string appPath)
         {
             FlushConfigs();
+            CreateUser();
             string appstr = @"{""name"":""" + Path.GetFileNameWithoutExtension(appPath) + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);

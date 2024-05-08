@@ -21,6 +21,7 @@ using System.Net.Http;
 using System.Net;
 using System.Text;
 using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Interop.InteropMethods;
+using System.Threading.Tasks;
 
 
 namespace PlayTogetherMod
@@ -74,29 +75,31 @@ namespace PlayTogetherMod
             shortProc.Dispose();
         }
 
-        public void SendPin(string pin)
+        public async Task SendPin(string pin)
         {
-            //streamWriter.WriteLine(pin);
-            var payload = @"{""mimeType"":""text/plain;charset=UTF-8"",""text"":""{\""" + pin + @"\"":\""1234\""}""}"; //Returns "error": "No such node (pin)". Not that simple..
-            var client = new HttpClient(new HttpClientHandler { Credentials = new NetworkCredential(_usr,_pwd)});
-            var request = new HttpRequestMessage(HttpMethod.Post, _url)
+            var payload = @"{""pin"":""" + pin + @"""}";
+            var handler = new HttpClientHandler { Credentials = new NetworkCredential(_usr, _pwd) };
+            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+            using (var client = new HttpClient(handler))
             {
-                Content = new StringContent(payload, Encoding.UTF8, "text/plain")
-            };
-            File.WriteAllText("REQUESTLOG.txt",request.Content.ReadAsStringAsync().Result);
-            HttpResponseMessage response = client.SendAsync(request).Result;
-            File.WriteAllText("REPLYLOG.txt", response.Content.ReadAsStringAsync().Result);
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                MelonLogger.Msg("HTTP REQ OK");
-                File.WriteAllText("OKLOG.txt", "OK");
+                var request = new HttpRequestMessage(HttpMethod.Post, _url)
+                {
+                    Content = new StringContent(payload, Encoding.UTF8, "text/plain")
+                };
+                HttpResponseMessage response;
+                try
+                {
+                    response = await client.SendAsync(request);
+                    if (response.StatusCode != HttpStatusCode.OK)
+                        MelonLogger.Msg("PIN REQ FAIL");
+                    string? reply = await response.Content.ReadAsStringAsync();
+                    MelonLogger.Msg($"Pin req. reply:\n{reply}");
+                }
+                catch (Exception ex)
+                {
+                    MelonLogger.Msg($"Error sending pin: {ex.Message}");
+                }
             }
-            else
-            {
-                MelonLogger.Msg("HTTP REQ FAIL");
-                File.WriteAllText("OKLOG.txt", "BAD");
-            }
-            client.Dispose();
         }
 
         private void FlushConfigs()
@@ -312,9 +315,9 @@ namespace PlayTogetherMod
             Category sendPinCat;
             sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
             var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
-            sendPinButton.OnPress += () =>
+            sendPinButton.OnPress += async () =>
             {
-                _sunshine.SendPin(_pinInputs);
+                await _sunshine.SendPin(_pinInputs);
                 pinNumpad.Disabled = false;
                 _pinInputs = "";
                 sendPinButton.ButtonText = _pinInputs;

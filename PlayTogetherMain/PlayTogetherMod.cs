@@ -99,11 +99,12 @@ namespace PlayTogetherMod
                     MelonLogger.Msg($"Exception sending pin.");
                     if (response != null)
                         MelonLogger.Msg($"StatusCode: {response.StatusCode}");
-                    while( ex != null && ex.InnerException != null)
+                    Exception currentEx = ex;
+                    while (currentEx != null && currentEx.InnerException != null)
                     {
-                        MelonLogger.Msg($"Exception: {ex.Message}");
-                        ex = ex.InnerException;
-                    }    
+                        MelonLogger.Msg($"Exception: {currentEx.Message}");
+                        currentEx = currentEx.InnerException;
+                    }
                 }
             }
         }

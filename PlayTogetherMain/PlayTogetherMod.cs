@@ -86,18 +86,24 @@ namespace PlayTogetherMod
                 {
                     Content = new StringContent(payload, Encoding.UTF8, "text/plain")
                 };
-                HttpResponseMessage response;
+                HttpResponseMessage? response = null;
                 try
                 {
                     response = await client.SendAsync(request);
-                    if (response.StatusCode != HttpStatusCode.OK)
-                        MelonLogger.Msg("PIN REQ FAIL");
+                    MelonLogger.Msg($"Pin sent.");
                     string? reply = await response.Content.ReadAsStringAsync();
                     MelonLogger.Msg($"Pin req. reply:\n{reply}");
                 }
                 catch (Exception ex)
                 {
-                    MelonLogger.Msg($"Error sending pin: {ex.Message}");
+                    MelonLogger.Msg($"Exception sending pin.");
+                    if (response != null)
+                        MelonLogger.Msg($"StatusCode: {response.StatusCode}");
+                    while( ex != null && ex.InnerException != null)
+                    {
+                        MelonLogger.Msg($"Exception: {ex.Message}");
+                        ex = ex.InnerException;
+                    }    
                 }
             }
         }

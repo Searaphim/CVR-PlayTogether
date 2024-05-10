@@ -53,7 +53,7 @@ namespace PlayTogetherMod
         {
             FileName = EXE_PATH,
             WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
-            Arguments = "-p", //Arguments = "-p -0",
+            Arguments = "-p",
             UseShellExecute = false,
             RedirectStandardInput = false,
             RedirectStandardOutput = false
@@ -66,7 +66,7 @@ namespace PlayTogetherMod
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
-                Arguments = $"--creds {_usr} {_pwd}", //Arguments = "-p -0",
+                Arguments = $"--creds {_usr} {_pwd}",
                 UseShellExecute = false,
                 RedirectStandardInput = false,
                 RedirectStandardOutput = false
@@ -398,6 +398,8 @@ namespace PlayTogetherMod
             var connectButton = confirmCat.AddButton("", "", "Attempt connection with Host");
             connectButton.OnPress += () =>
             {
+                if (connectButton.ButtonText == "")
+                    return;
                 var pairingPin = GeneratePairingPin();
                 QuickMenuAPI.ShowNotice("Pairing Pin", 
                     $"Please only press OK after Pairing succeeded or failed. The host will tell you -> They must enter this pin to approve your connection: {pairingPin}",

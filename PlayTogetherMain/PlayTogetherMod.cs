@@ -163,9 +163,18 @@ namespace PlayTogetherMod
             return new IniParserHelper().ExtractAppName(INI_PATH);
         }
 
+        private void FlushConfigs()
+        {
+            if (File.Exists(INI_PATH))
+            {
+                File.Delete(INI_PATH);
+            }
+        }
+
         public void PairWithHost(string pairPin)
         {
             StopPairing();
+            FlushConfigs();
             _lobbyDestination = LobbyCodeHandler.LobbyCodeToIP(_lobbyCode);
             _pairprocess = Process.Start(new ProcessStartInfo()
             {

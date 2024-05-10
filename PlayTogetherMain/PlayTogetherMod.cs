@@ -22,7 +22,8 @@ using System.Net;
 using System.Text;
 using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Interop.InteropMethods;
 using System.Threading.Tasks;
-
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace PlayTogetherMod
 {
@@ -35,12 +36,12 @@ namespace PlayTogetherMod
     public class Sunshine
     {
         private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\sunshine.exe";
-        private const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; // Multicast may or may not be necessary for multiple clients, idk.
+        private const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; // Multicast may or may not be necessary for multiple clients, idk yet.
         private const string APPSDEFCONF_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\assets\apps.json";
         private const string APPSCONF_DIR = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config";
+
         private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
         private Process normalprocess;
-        private StreamWriter streamWriter;
         private string _url = "https://localhost:47990/api/pin";
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
@@ -54,7 +55,7 @@ namespace PlayTogetherMod
             WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
             Arguments = "-p", //Arguments = "-p -0",
             UseShellExecute = false,
-            RedirectStandardInput = true,
+            RedirectStandardInput = false,
             RedirectStandardOutput = false
         };
         // Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
@@ -67,7 +68,7 @@ namespace PlayTogetherMod
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
                 Arguments = $"--creds {_usr} {_pwd}", //Arguments = "-p -0",
                 UseShellExecute = false,
-                RedirectStandardInput = true,
+                RedirectStandardInput = false,
                 RedirectStandardOutput = false
             };
             Process shortProc = Process.Start(credsProc); //Not a concern since we dont expose the interface to the internet
@@ -75,44 +76,52 @@ namespace PlayTogetherMod
             shortProc.Dispose();
         }
 
-        public async Task SendPin(string pin)
+        public bool SendPin(string pin)
         {
-            var payload = @"{""pin"":""" + pin + @"""}";
-            var handler = new HttpClientHandler { Credentials = new NetworkCredential(_usr, _pwd) };
-            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
-            using (var client = new HttpClient(handler))
+            //Disables certificates. For now Im not sure how to add the server's certificate to the unity runtime's trust store or if I even should.
+            RemoteCertificateValidationCallback cbCertValidation = (sender, certificate, chain, sslPolicyErrors) => true;
+            ServicePointManager.ServerCertificateValidationCallback += cbCertValidation;
+            try
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, _url)
+                var handler = new HttpClientHandler { Credentials = new NetworkCredential(_usr, _pwd) };
+                var client = new HttpClient(handler);
+                var request = new HttpRequestMessage(HttpMethod.Post, _url);
+                var payload = @"{""pin"":""" + pin + @"""}";
+                var content = new StringContent(payload, Encoding.UTF8, "text/plain");
+                request.Content = content;
+                var response = client.SendAsync(request).Result;
+                response.EnsureSuccessStatusCode();
+                var responseContent = response.Content.ReadAsStringAsync().Result;
+                // Parse the response using regular expressions
+                var regex = new Regex(@"\{\s*""status""\s*:\s*""(true|false)""\s*\}");
+                var match = regex.Match(responseContent);
+                if (match.Success)
                 {
-                    Content = new StringContent(payload, Encoding.UTF8, "text/plain")
-                };
-                HttpResponseMessage? response = null;
-                try
-                {
-                    response = await client.SendAsync(request);
-                    MelonLogger.Msg($"Pin sent.");
-                    string? reply = await response.Content.ReadAsStringAsync();
-                    MelonLogger.Msg($"Pin req. reply:\n{reply}");
+                    var status = match.Groups[1].Value;
+                    return status == "true";
                 }
-                catch (Exception ex)
+                else
                 {
-                    MelonLogger.Msg($"Exception sending pin.");
-                    if (response != null)
-                        MelonLogger.Msg($"StatusCode: {response.StatusCode}");
-                    Exception currentEx = ex;
-                    while (currentEx != null && currentEx.InnerException != null)
-                    {
-                        MelonLogger.Msg($"Exception: {currentEx.Message}");
-                        currentEx = currentEx.InnerException;
-                    }
+                    return false;
                 }
+            }
+            catch(Exception ex)
+            {
+                return false;
+            }
+            finally {
+                //Restore default certification validation
+                ServicePointManager.ServerCertificateValidationCallback -= cbCertValidation;
             }
         }
 
         private void FlushConfigs()
         {
-            if(Directory.Exists(APPSCONF_DIR))
-                Directory.Delete(APPSCONF_DIR, true);
+            string[] files = Directory.GetFiles(APPSCONF_DIR);
+            foreach (string file in files)
+            {
+                File.Delete(file);
+            }
         }
 
         public void Run(string appPath)
@@ -122,7 +131,6 @@ namespace PlayTogetherMod
             string appstr = @"{""name"":""" + Path.GetFileNameWithoutExtension(appPath) + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);
-            streamWriter = normalprocess.StandardInput;
         }
 
         public void Stop()
@@ -322,9 +330,12 @@ namespace PlayTogetherMod
             Category sendPinCat;
             sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
             var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
-            sendPinButton.OnPress += async () =>
+            sendPinButton.OnPress += () =>
             {
-                await _sunshine.SendPin(_pinInputs);
+                var response = _sunshine.SendPin(_pinInputs);
+                if (response)
+                    QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Success!");
+                else QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Failed.");
                 pinNumpad.Disabled = false;
                 _pinInputs = "";
                 sendPinButton.ButtonText = _pinInputs;
@@ -375,7 +386,9 @@ namespace PlayTogetherMod
             connectButton.OnPress += () =>
             {
                 var pairingPin = GeneratePairingPin();
-                QuickMenuAPI.ShowNotice("Pairing Pin", $"The host must enter this pin to approve your connection: {pairingPin}", null);
+                QuickMenuAPI.ShowNotice("Pairing Pin", 
+                    $"Please only press OK after Pairing succeeded or failed. The host will tell you -> They must enter this pin to approve your connection: {pairingPin}",
+                    () => { _moonlight.StopPairing(); });
                 _moonlight.LobbyCode = connectButton.ButtonText;
                 _moonlight.PairWithHost(pairingPin);
             };

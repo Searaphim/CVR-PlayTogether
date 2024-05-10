@@ -42,7 +42,7 @@ namespace PlayTogetherMod
 
         private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
         private Process normalprocess;
-        private string _url = "https://localhost:47990/api/pin";
+        private string _url = "https://localhost:47990/api/pin"; //Security could be further increased by changing LAN restriction to localhost only.
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
 
@@ -158,6 +158,11 @@ namespace PlayTogetherMod
             set { _lobbyCode = value; }
         }
 
+        private string? GetHostAppTitle()
+        {
+            return new IniParserHelper().ExtractAppName(INI_PATH);
+        }
+
         public void PairWithHost(string pairPin)
         {
             StopPairing();
@@ -179,9 +184,9 @@ namespace PlayTogetherMod
                 File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
         }
 
-        private void StartSession(string host)
+        private void StartSession(string host, string? hostAppTitle)
         {
-            if(host == "")
+            if ((hostAppTitle == null) || (hostAppTitle == "") || (host == "") || (host == null))
             {
                 return;
             }
@@ -189,15 +194,16 @@ namespace PlayTogetherMod
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
+                Arguments = @$"stream {host} ""{hostAppTitle}""",
                 UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
+                RedirectStandardInput = false, //
+                RedirectStandardOutput = false //
             });
         }
 
         public void Run()
         {
-            StartSession(_lobbyDestination);
+            StartSession(_lobbyDestination, GetHostAppTitle());
         }
 
         private bool StopProcess(Process proc)

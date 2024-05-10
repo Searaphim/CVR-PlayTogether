@@ -193,20 +193,29 @@ namespace PlayTogetherMod
                 File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
         }
 
+        public bool IsAppBlacklisted(string appTitle)
+        {
+            if(appTitle == "Desktop")
+                return true;
+            return false;
+        }
+
         private void StartSession(string host, string? hostAppTitle)
         {
             if ((hostAppTitle == null) || (hostAppTitle == "") || (host == "") || (host == null))
             {
                 return;
             }
+            if (IsAppBlacklisted(hostAppTitle))
+                return;
             _sessionProc = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
                 Arguments = @$"stream {host} ""{hostAppTitle}""",
                 UseShellExecute = false,
-                RedirectStandardInput = false, //
-                RedirectStandardOutput = false //
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false
             });
         }
 

@@ -147,8 +147,8 @@ namespace PlayTogetherMod
     {
         private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
         private const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
-        private Process _sessionProc;
-        private Process _pairprocess = null;
+        private Process? _sessionProc = null;
+        private Process? _pairprocess = null;
         private string _lobbyCode = "";
         private string _lobbyDestination = "";
 
@@ -173,8 +173,8 @@ namespace PlayTogetherMod
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
                 Arguments = $"pair {_lobbyDestination} --pin {pairPin}",
                 UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false
             });
         }
 
@@ -206,9 +206,9 @@ namespace PlayTogetherMod
             StartSession(_lobbyDestination, GetHostAppTitle());
         }
 
-        private bool StopProcess(Process proc)
+        private bool StopProcess(Process? proc)
         {
-            if (_pairprocess != null)
+            if (proc != null)
             {
                 if (!proc.HasExited)
                 {
@@ -223,13 +223,20 @@ namespace PlayTogetherMod
         public void StopPairing()
         {
             if (StopProcess(_pairprocess))
+            {
                 _pairprocess.Dispose();
+                _pairprocess = null;
+            }
+
         }
 
         public void StopSession()
         {
-            if(StopProcess(_sessionProc))
+            if (StopProcess(_sessionProc))
+            {
                 _sessionProc.Dispose();
+                _sessionProc = null;
+            }
         }
     }
 

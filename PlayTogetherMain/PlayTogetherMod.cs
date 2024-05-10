@@ -76,7 +76,7 @@ namespace PlayTogetherMod
             shortProc.Dispose();
         }
 
-        public bool SendPin(string pin)
+        public async Task<bool> SendPin(string pin)
         {
             //Disables certificates. For now Im not sure how to add the server's certificate to the unity runtime's trust store or if I even should.
             RemoteCertificateValidationCallback cbCertValidation = (sender, certificate, chain, sslPolicyErrors) => true;
@@ -89,9 +89,9 @@ namespace PlayTogetherMod
                 var payload = @"{""pin"":""" + pin + @"""}";
                 var content = new StringContent(payload, Encoding.UTF8, "text/plain");
                 request.Content = content;
-                var response = client.SendAsync(request).Result;
+                var response = await client.SendAsync(request);
                 response.EnsureSuccessStatusCode();
-                var responseContent = response.Content.ReadAsStringAsync().Result;
+                var responseContent = await response.Content.ReadAsStringAsync();
                 // Parse the response using regular expressions
                 var regex = new Regex(@"\{\s*""status""\s*:\s*""(true|false)""\s*\}");
                 var match = regex.Match(responseContent);
@@ -343,17 +343,24 @@ namespace PlayTogetherMod
             Category sendPinCat;
             sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
             var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
-            sendPinButton.OnPress += () =>
-            {
-                var response = _sunshine.SendPin(_pinInputs);
-                if (response)
-                    QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Success!");
-                else QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Failed.");
-                pinNumpad.Disabled = false;
-                _pinInputs = "";
-                sendPinButton.ButtonText = _pinInputs;
-            };
             var clearPinButton = sendPinCat.AddButton("Clear", "", "Clear PIN");
+            sendPinButton.OnPress += async () =>
+            {
+                sendPinButton.Disabled = true;
+                clearPinButton.Disabled = true;
+                Action actionContinue = () =>
+                {
+                    pinNumpad.Disabled = false;
+                    _pinInputs = "";
+                    sendPinButton.ButtonText = _pinInputs;
+                    sendPinButton.Disabled = false;
+                    clearPinButton.Disabled = false;
+                };
+                var response = await _sunshine.SendPin(_pinInputs);
+                if (response)
+                    QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Success!", actionContinue);
+                else QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Failed.", actionContinue);
+            };
             clearPinButton.OnPress += () =>
             {
                 pinNumpad.Disabled = false;

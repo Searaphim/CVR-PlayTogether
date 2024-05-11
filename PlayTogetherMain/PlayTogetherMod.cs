@@ -45,6 +45,13 @@ namespace PlayTogetherMod
         private string _url = "https://localhost:47990/api/pin"; //Security could be further increased by changing LAN restriction to localhost only.
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
+        private string _HostedAppName = "";
+
+        public string HostedAppName
+        {
+            get { return _HostedAppName; }
+            set { _HostedAppName = value; } 
+        }
 
         ~Sunshine() {
             Stop();
@@ -132,7 +139,8 @@ namespace PlayTogetherMod
         {
             FlushConfigs();
             CreateUser();
-            string appstr = @"{""name"":""" + Path.GetFileNameWithoutExtension(appPath) + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
+            _HostedAppName = Path.GetFileNameWithoutExtension(appPath);
+            string appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);
         }
@@ -160,6 +168,8 @@ namespace PlayTogetherMod
         private Process? _pairprocess = null;
         private string _lobbyCode = "";
         private string _lobbyDestination = "";
+
+        public Process? SessionProcess { get { return _sessionProc; } }
 
         ~Moonlight() {
             StopPairing();
@@ -283,6 +293,8 @@ namespace PlayTogetherMod
         private Moonlight _moonlight;
         private string _pinInputs = "";
         private string _tempTargetLobbyCode = "";
+        private IEnumerable<Process> _processList;
+        private IEnumerator<Process> _processEnum;
 
         private void UnpackResources()
         {
@@ -319,6 +331,69 @@ namespace PlayTogetherMod
             var globalCat = _rootPage.AddCategory("Global Settings");
 
             var sliderFPS = globalCat.AddSlider("FPS", "Adjust the framerate.", 30f, 0f, 144f);
+            var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "Toggle Mode", true);
+            var cycleWindowBtnFwd = globalCat.AddButton("Cycle Window =>", "", "Cycle through Windows");
+            cycleWindowBtnFwd.Disabled = true;
+            desktopModeToggle.OnValueUpdated += b =>
+            {
+                if (b == true)
+                {
+                    cycleWindowBtnFwd.Disabled = true;
+                    Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                    if (!sceneInstance.IsValid()) return;
+                    GameObject[] gObjs = sceneInstance.GetRootGameObjects();
+                    foreach (var item in gObjs)
+                    {
+                        uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
+                        if (comp == null) return;
+                        comp.type = WindowTextureType.Desktop;
+                    }
+                }
+                else
+                {
+                    string windowTitle = "";
+                    Process[] processes = Process.GetProcessesByName(_sunshine.HostedAppName);
+                    _processList = processes;
+                    if(processes.Length != 0) //Means we're currently hosting an app.
+                    {
+                        cycleWindowBtnFwd.Disabled = false;
+                        _processList = processes;
+                        _processEnum = _processList.GetEnumerator();
+                        _processEnum.MoveNext();
+                        windowTitle = _processEnum.Current.MainWindowTitle;
+                    }
+                    else { //Means we're not hosting an app. //We stay on Desktop Mode if both moonlight and sunshine arent doing anything
+                        if (_moonlight.SessionProcess == null) return;
+                        windowTitle = _moonlight.SessionProcess.MainWindowTitle;
+                    }
+                    Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                    if (!sceneInstance.IsValid()) return;
+                    GameObject[] gObjs = sceneInstance.GetRootGameObjects();
+                    foreach (var item in gObjs)
+                    {
+                        uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
+                        if (comp == null) return;
+                        comp.partialWindowTitle = windowTitle;
+                        comp.type = WindowTextureType.Window;
+                    }
+                }
+            };
+            cycleWindowBtnFwd.OnPress += () =>
+            {
+                if (!_processEnum.MoveNext()) {
+                    _processEnum.Reset();
+                    _processEnum.MoveNext();
+                }
+                Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                if (!sceneInstance.IsValid()) return;
+                GameObject[] gObjs = sceneInstance.GetRootGameObjects();
+                foreach (var item in gObjs)
+                {
+                    uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
+                    if (comp == null) return;
+                    comp.partialWindowTitle = $"{_processEnum.Current.MainWindowTitle}";
+                }
+            };
             var buttonApply = globalCat.AddButton("Apply", "", "Apply settings to active screens");
             buttonApply.OnPress += () =>
             {

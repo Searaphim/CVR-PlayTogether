@@ -41,10 +41,14 @@ namespace PlayTogetherMod
         private const string APPSCONF_DIR = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config";
 
         private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
-        private Process normalprocess;
+        private Process? normalprocess;
         private string _url = "https://localhost:47990/api/pin"; //Security could be further increased by changing LAN restriction to localhost only.
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
+
+        ~Sunshine() {
+            Stop();
+        }
 
         // Apps file is only read on launch so sunshine needs to restart on edit. Probably the same for other confs.
         // channels=3 (3 distinct streams) //3 for 4 players
@@ -135,10 +139,15 @@ namespace PlayTogetherMod
 
         public void Stop()
         {
-            if (!normalprocess.HasExited)
+            if (normalprocess != null)
             {
-                normalprocess.Kill();
-                normalprocess.WaitForExit();
+                if (!normalprocess.HasExited)
+                {
+                    normalprocess.Kill();
+                    normalprocess.WaitForExit();
+                }
+                normalprocess.Dispose();
+                normalprocess = null;
             }
         }
     }
@@ -151,6 +160,11 @@ namespace PlayTogetherMod
         private Process? _pairprocess = null;
         private string _lobbyCode = "";
         private string _lobbyDestination = "";
+
+        ~Moonlight() {
+            StopPairing();
+            StopSession();
+        }
 
         public string LobbyCode
         {

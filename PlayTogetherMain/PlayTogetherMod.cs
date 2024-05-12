@@ -339,15 +339,14 @@ namespace PlayTogetherMod
                 if (b == true)
                 {
                     cycleWindowBtnFwd.Disabled = true;
+                    Dictionary<string, object> changes = new Dictionary<string, object>
+                    {
+                        {"type", WindowTextureType.Desktop}
+                    };
                     Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                     if (!sceneInstance.IsValid()) return;
-                    GameObject[] gObjs = sceneInstance.GetRootGameObjects();
-                    foreach (var item in gObjs)
-                    {
-                        uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
-                        if (comp == null) return;
-                        comp.type = WindowTextureType.Desktop;
-                    }
+                    EditUwcWindowTextures(sceneInstance, changes);
+                    MelonLogger.Msg($"Desktop mode applied.");
                 }
                 else
                 {
@@ -361,21 +360,32 @@ namespace PlayTogetherMod
                         _processEnum = _processList.GetEnumerator();
                         _processEnum.MoveNext();
                         windowTitle = _processEnum.Current.MainWindowTitle;
+                        MelonLogger.Msg($"Title1: {windowTitle}");
                     }
                     else { //Means we're not hosting an app. //We stay on Desktop Mode if both moonlight and sunshine arent doing anything
                         if (_moonlight.SessionProcess == null) return;
                         windowTitle = _moonlight.SessionProcess.MainWindowTitle;
+                        MelonLogger.Msg($"Title2: {windowTitle}");
                     }
+                    /*Dictionary<string, object> changes = new Dictionary<string, object>
+                    {
+                        {"type", WindowTextureType.Window},
+                        {"partialWindowTitle", windowTitle}
+                    };*/
+                    Dictionary<string, object> changes = new Dictionary<string, object>
+                    {
+                        {"type", WindowTextureType.Window}
+                    };
+                    Dictionary<string, object> changes2 = new Dictionary<string, object>
+                    {
+                        {"partialWindowTitle", windowTitle}
+                    };
                     Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                     if (!sceneInstance.IsValid()) return;
-                    GameObject[] gObjs = sceneInstance.GetRootGameObjects();
-                    foreach (var item in gObjs)
-                    {
-                        uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
-                        if (comp == null) return;
-                        comp.partialWindowTitle = windowTitle;
-                        comp.type = WindowTextureType.Window;
-                    }
+                    EditUwcWindowTextures(sceneInstance, changes2);
+                    EditUwcWindowTextures(sceneInstance, changes);
+
+                    MelonLogger.Msg($"Window mode applied.");
                 }
             };
             cycleWindowBtnFwd.OnPress += () =>
@@ -384,29 +394,28 @@ namespace PlayTogetherMod
                     _processEnum.Reset();
                     _processEnum.MoveNext();
                 }
+                var windowTitle = _processEnum.Current.MainWindowTitle;
+                Dictionary<string, object> changes = new Dictionary<string, object>
+                {
+                    {"partialWindowTitle", windowTitle}
+                };
                 Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                 if (!sceneInstance.IsValid()) return;
-                GameObject[] gObjs = sceneInstance.GetRootGameObjects();
-                foreach (var item in gObjs)
-                {
-                    uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
-                    if (comp == null) return;
-                    comp.partialWindowTitle = $"{_processEnum.Current.MainWindowTitle}";
-                }
+                EditUwcWindowTextures(sceneInstance, changes);
+                MelonLogger.Msg($"Title3: {windowTitle}");
             };
             var buttonApply = globalCat.AddButton("Apply", "", "Apply settings to active screens");
             buttonApply.OnPress += () =>
             {
+                int framerate = (int)Math.Round(sliderFPS.SliderValue, 0);
+                Dictionary<string, object> changes = new Dictionary<string, object>
+                {
+                    {"captureFrameRate", framerate}
+                };
                 Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                 if (!sceneInstance.IsValid()) return;
-                GameObject[] gObjs = sceneInstance.GetRootGameObjects();
-                foreach (var item in gObjs)
-                {
-                    uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
-                    if (comp == null) return;
-                    comp.captureFrameRate = (int)Math.Round(sliderFPS.SliderValue, 0);
-                    //TODO: Add the rest of the settings here
-                }
+                EditUwcWindowTextures(sceneInstance, changes);
+                MelonLogger.Msg($"Applied fps: {framerate}");
             };
 
             var hostCat = _rootPage.AddCategory("Game Hosting");
@@ -546,6 +555,44 @@ namespace PlayTogetherMod
                         lobbyNumpad.Disabled = true;
                     }
                 };
+            }
+        }
+
+        public void EditUwcWindowTextures(Scene sceneInstance, Dictionary<string, object> propertyChanges)
+        {
+            if (!sceneInstance.IsValid()) return;
+            GameObject[] gObjs = sceneInstance.GetRootGameObjects();
+
+            foreach (var item in gObjs)
+            {
+                FindAndEditUwcWindowTexture(item, propertyChanges);
+            }
+        }
+
+        void FindAndEditUwcWindowTexture(GameObject go, Dictionary<string, object> propertyChanges)
+        {
+            uWindowCapture.UwcWindowTexture[] comps = go.GetComponentsInChildren<uWindowCapture.UwcWindowTexture>();
+            foreach (uWindowCapture.UwcWindowTexture comp in comps)
+            {
+                
+                EditComponent(comp, propertyChanges);
+            }
+        }
+
+        void EditComponent(uWindowCapture.UwcWindowTexture component, Dictionary<string, object> propertyChanges)
+        {
+            foreach (var pair in propertyChanges)
+            {
+                FieldInfo field = typeof(uWindowCapture.UwcWindowTexture).GetField(pair.Key);
+
+                if (field != null)
+                {
+                    try { field.SetValue(component, pair.Value); }
+                    catch (Exception ex)
+                    {
+                        MelonLogger.Msg($"Error setting private property '{pair.Key}': {ex.Message}");
+                    }
+                }
             }
         }
 

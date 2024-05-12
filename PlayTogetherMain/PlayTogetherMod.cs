@@ -367,24 +367,14 @@ namespace PlayTogetherMod
                         windowTitle = _moonlight.SessionProcess.MainWindowTitle;
                         MelonLogger.Msg($"Title2: {windowTitle}");
                     }
-                    /*Dictionary<string, object> changes = new Dictionary<string, object>
-                    {
-                        {"type", WindowTextureType.Window},
-                        {"partialWindowTitle", windowTitle}
-                    };*/
                     Dictionary<string, object> changes = new Dictionary<string, object>
                     {
-                        {"type", WindowTextureType.Window}
-                    };
-                    Dictionary<string, object> changes2 = new Dictionary<string, object>
-                    {
+                        {"type", WindowTextureType.Window},
                         {"partialWindowTitle", windowTitle}
                     };
                     Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                     if (!sceneInstance.IsValid()) return;
-                    EditUwcWindowTextures(sceneInstance, changes2);
                     EditUwcWindowTextures(sceneInstance, changes);
-
                     MelonLogger.Msg($"Window mode applied.");
                 }
             };

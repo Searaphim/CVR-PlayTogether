@@ -142,6 +142,7 @@ namespace PlayTogetherMod
             _HostedAppName = Path.GetFileNameWithoutExtension(appPath);
             string appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
+            File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);
         }
 

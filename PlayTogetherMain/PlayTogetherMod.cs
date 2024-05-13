@@ -345,7 +345,7 @@ namespace PlayTogetherMod
                     };
                     Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                     if (!sceneInstance.IsValid()) return;
-                    EditUwcWindowTextures(sceneInstance, changes);
+                    EditUwcWindowTextures(sceneInstance, changes, false);
                     MelonLogger.Msg($"Desktop mode applied.");
                 }
                 else
@@ -374,7 +374,7 @@ namespace PlayTogetherMod
                     };
                     Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                     if (!sceneInstance.IsValid()) return;
-                    EditUwcWindowTextures(sceneInstance, changes);
+                    EditUwcWindowTextures(sceneInstance, changes, false);
                     MelonLogger.Msg($"Window mode applied.");
                 }
             };
@@ -391,7 +391,7 @@ namespace PlayTogetherMod
                 };
                 Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                 if (!sceneInstance.IsValid()) return;
-                EditUwcWindowTextures(sceneInstance, changes);
+                EditUwcWindowTextures(sceneInstance, changes, false);
                 MelonLogger.Msg($"Title3: {windowTitle}");
             };
             var buttonApply = globalCat.AddButton("Apply", "", "Apply settings to active screens");
@@ -404,7 +404,7 @@ namespace PlayTogetherMod
                 };
                 Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                 if (!sceneInstance.IsValid()) return;
-                EditUwcWindowTextures(sceneInstance, changes);
+                EditUwcWindowTextures(sceneInstance, changes, true);
                 MelonLogger.Msg($"Applied fps: {framerate}");
             };
 
@@ -548,28 +548,37 @@ namespace PlayTogetherMod
             }
         }
 
-        public void EditUwcWindowTextures(Scene sceneInstance, Dictionary<string, object> propertyChanges)
+        public void EditUwcWindowTextures(Scene sceneInstance, Dictionary<string, object> propertyChanges, bool isField)
         {
             if (!sceneInstance.IsValid()) return;
             GameObject[] gObjs = sceneInstance.GetRootGameObjects();
 
             foreach (var item in gObjs)
             {
-                FindAndEditUwcWindowTexture(item, propertyChanges);
+                FindAndEditUwcWindowTexture(item, propertyChanges, isField);
             }
         }
 
-        void FindAndEditUwcWindowTexture(GameObject go, Dictionary<string, object> propertyChanges)
+        void FindAndEditUwcWindowTexture(GameObject go, Dictionary<string, object> propertyChanges, bool isField)
         {
             uWindowCapture.UwcWindowTexture[] comps = go.GetComponentsInChildren<uWindowCapture.UwcWindowTexture>();
-            foreach (uWindowCapture.UwcWindowTexture comp in comps)
+            if(isField)
             {
-                
-                EditComponent(comp, propertyChanges);
+                foreach (uWindowCapture.UwcWindowTexture comp in comps)
+                {
+                    EditComponentField(comp, propertyChanges);
+                }
+            }
+            else
+            {
+                foreach (uWindowCapture.UwcWindowTexture comp in comps)
+                {
+                    EditComponent(comp, propertyChanges);
+                }
             }
         }
 
-        void EditComponent(uWindowCapture.UwcWindowTexture component, Dictionary<string, object> propertyChanges)
+        void EditComponentField(uWindowCapture.UwcWindowTexture component, Dictionary<string, object> propertyChanges)
         {
             foreach (var pair in propertyChanges)
             {
@@ -578,6 +587,23 @@ namespace PlayTogetherMod
                 if (field != null)
                 {
                     try { field.SetValue(component, pair.Value); }
+                    catch (Exception ex)
+                    {
+                        MelonLogger.Msg($"Error setting private property '{pair.Key}': {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        void EditComponent(uWindowCapture.UwcWindowTexture component, Dictionary<string, object> propertyChanges)
+        {
+            foreach (var pair in propertyChanges)
+            {
+                PropertyInfo property = typeof(uWindowCapture.UwcWindowTexture).GetProperty(pair.Key);
+
+                if (property != null && property.CanWrite)
+                {
+                    try { property.SetValue(component, pair.Value); }
                     catch (Exception ex)
                     {
                         MelonLogger.Msg($"Error setting private property '{pair.Key}': {ex.Message}");

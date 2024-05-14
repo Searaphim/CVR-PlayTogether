@@ -429,6 +429,7 @@ namespace PlayTogetherMod
                     LoggerInstance.Msg($"Selected file: {filePath}");
                     if (filePath != "")
                     {
+                        QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
                         _sunshine.Run(filePath);
                         pinPage.Disabled = false;
                         viewCodeButton.Disabled = false;

@@ -421,15 +421,17 @@ namespace PlayTogetherMod
             var pinPage = hostCat.AddPage("Friend pairing", "", "Enter pairing PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);
-            hostToggle.OnValueUpdated += b =>
+            hostToggle.OnValueUpdated += async b =>
             {
                 if (b == true)
                 {
-                    var filePath = FileBrowser.BrowseForFile();
+                    QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
+                    hostToggle.Disabled = true;
+                    var filePath = await FileBrowser.BrowseForFile();
+                    hostToggle.Disabled = false;
                     LoggerInstance.Msg($"Selected file: {filePath}");
                     if (filePath != "")
                     {
-                        QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
                         _sunshine.Run(filePath);
                         pinPage.Disabled = false;
                         viewCodeButton.Disabled = false;

@@ -2,6 +2,8 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PlayTogetherMod.Utils
 {
@@ -40,13 +42,13 @@ namespace PlayTogetherMod.Utils
         {
             [DllImport("Comdlg32.dll", SetLastError = true, ThrowOnUnmappableChar = true, CharSet = CharSet.Auto)]
             public static extern bool GetOpenFileName([In, Out] OpenFileName ofn);
-            public static bool GetOpenFileName1([In, Out] OpenFileName ofn)
+            public static async Task<bool> GetOpenFileNameAsync([In, Out] OpenFileName ofn)
             {
-                return GetOpenFileName(ofn);
+                return await Task.Run(() => GetOpenFileName(ofn));
             }
         }
 
-        public static string BrowseForFile()
+        public static async Task<string> BrowseForFile()
         {
             OpenFileName ofn = new OpenFileName();
             ofn.structSize = Marshal.SizeOf(ofn);
@@ -56,14 +58,21 @@ namespace PlayTogetherMod.Utils
             ofn.fileTitle = new string(new char[64]);
             ofn.maxFileTitle = ofn.fileTitle.Length;
             ofn.initialDir = UnityEngine.Application.dataPath;
-            ofn.title = "Select Game Executable";
+            ofn.title = "Select your application";
             ofn.defExt = "EXE";
-            ofn.flags = 0x00080000 | 0x00001000 | 0x00000800 | 0x00000008;//OFN_EXPLORER|OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR
-            if (DllTest.GetOpenFileName(ofn))
+            ofn.flags = 0x00080000 | 0x00001000 | 0x00000800 | 0x00000008; // OFN_EXPLORER|OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR
+
+            Task<bool> task = DllTest.GetOpenFileNameAsync(ofn);
+            await task;
+
+            if (!task.Result)
+            {
+                return string.Empty;
+            }
+            else
             {
                 return ofn.file;
             }
-            return "";
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿using Microsoft.Win32;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System;
+using Microsoft.Win32;
 
 namespace PlayTogetherMod.Utils
 {
@@ -83,19 +83,14 @@ namespace PlayTogetherMod.Utils
             try
             {
                 var guid = FindVBCableInputGUID();
-                Console.WriteLine($"Cable Input GUID: {guid}");
                 if (guid == "") return false;
                 Int32 deviceState = (Int32)RegistryHelper.ReadRegistryBIN(RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render\" + guid, "DeviceState");
-                Console.WriteLine($"InputDeviceState: {deviceState}");
                 if (deviceState != 1) return false; //Checks if vbcable input device is enabled
                 var appEndpoint = FindChilloutVREndpointKey();
-                Console.WriteLine($"App endpoint: {appEndpoint}");
                 if (appEndpoint == "") return false;
                 var inputRef = RegistryHelper.ReadRegistryValue(RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render\" + guid + @"\Properties", "{9c119480-ddc2-4954-a150-5bd240d454ad},1");
-                Console.WriteLine($"Audio Input Ref: {inputRef}");
                 if (inputRef == "") return false;
                 var appAudioRef = GetAppAudioRef(appEndpoint);
-                Console.WriteLine($"App Audio Ref: {appAudioRef}");
                 if (appAudioRef == "") return false;
                 if (inputRef == appAudioRef) return false; //Checks that ChilloutVR's audio isn't VBCable.
 
@@ -112,10 +107,8 @@ namespace PlayTogetherMod.Utils
             try
             {
                 var guidOut = FindVBCableOutputGUID();
-                Console.WriteLine($"Cable Output GUID: {guidOut}");
                 if (guidOut == "") return false;
                 Int32 deviceState = (Int32)RegistryHelper.ReadRegistryBIN(RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Capture\" + guidOut, "DeviceState");
-                Console.WriteLine($"OutputDeviceState: {deviceState}");
                 if (deviceState != 1) return false; //Checks if vbcable output device is enabled
                                                     //Checks if listen mode ON
                 byte[] outputBytes = (byte[])RegistryHelper.ReadRegistryBIN(RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Capture\" + guidOut + @"\Properties", "{24dbb0fc-9311-4b3d-9cf0-18ff155639d4},1");
@@ -125,9 +118,7 @@ namespace PlayTogetherMod.Utils
                 //Checks selected audio.
                 var outputRef = RegistryHelper.ReadRegistryValue(RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Capture\" + guidOut + @"\Properties", "{24dbb0fc-9311-4b3d-9cf0-18ff155639d4},0");
                 if (outputRef == "") return false;
-                Console.WriteLine($"OutputRef: {outputRef}");
                 var guidIn = FindVBCableInputGUID();
-                Console.WriteLine($"Cable Input GUID: {guidIn}");
                 if (guidIn == "") return false;
                 if (outputRef == "{0.0.0.00000000}." + guidIn) return false; //Checks that we don't transmit listen data to VBCable.
                 var appAudioRef = GetAppAudioRef(FindChilloutVREndpointKey());
@@ -143,7 +134,8 @@ namespace PlayTogetherMod.Utils
 
         private static void WindowsRun(string cmd)
         {
-            var pInfo = new ProcessStartInfo{ 
+            var pInfo = new ProcessStartInfo
+            {
                 FileName = "cmd.exe",
                 Arguments = "/c start " + cmd,
                 CreateNoWindow = true

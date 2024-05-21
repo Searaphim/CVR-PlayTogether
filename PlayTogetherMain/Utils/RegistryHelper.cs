@@ -50,7 +50,7 @@ namespace PlayTogetherMod.Utils
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error writing to registry: " + ex.Message);
+                throw; // rethrow the exception to propagate it up the call stack
             }
         }
     }

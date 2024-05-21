@@ -17,8 +17,8 @@ using MelonLoader.TinyJSON;
 using PlayTogetherMod.Utils;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
-using System.Net.Http;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Interop.InteropMethods;
 using System.Threading.Tasks;
@@ -306,21 +306,41 @@ namespace PlayTogetherMod
         private IEnumerable<Process> _processList;
         private IEnumerator<Process> _processEnum;
 
-        private void UnpackResources()
+        private void DLLResourceLoader(string sourcePath, string destPath)
         {
-            ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
-            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER + @"\Moonlight", true);
-            zip.Dispose();
-            zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
-            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER, true);
             byte[] dllBytes = null;
-            using (Stream stm = Assembly.GetExecutingAssembly().GetManifestResourceStream(UWINDOWCAPTURE_RESOURCE))
+            using (Stream stm = Assembly.GetExecutingAssembly().GetManifestResourceStream(sourcePath))
             {
                 dllBytes = new byte[(int)stm.Length];
                 stm.Read(dllBytes, 0, (int)stm.Length);
             }
-            File.WriteAllBytes(SharedVars.UWINDOWCAPTURE_DLL_PATH, dllBytes);
-            NativeLibrary.LoadLib(SharedVars.UWINDOWCAPTURE_DLL_PATH);
+            File.WriteAllBytes(destPath, dllBytes);
+            NativeLibrary.LoadLib(destPath);
+        }
+
+        private void DeleteFolderContents(string folderPath)
+        {
+            foreach (string filePath in Directory.GetFiles(folderPath))
+            {
+                File.Delete(filePath);
+            }
+            foreach (string subFolderPath in Directory.GetDirectories(folderPath))
+            {
+                DeleteFolderContents(subFolderPath);
+                Directory.Delete(subFolderPath);
+            }
+        }
+
+        private void UnpackResources()
+        {
+            ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
+            DeleteFolderContents(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
+            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
+            zip.Dispose();
+            zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
+            DeleteFolderContents(SharedVars.RESOURCE_FOLDER);
+            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER);
+            DLLResourceLoader(UWINDOWCAPTURE_RESOURCE, SharedVars.UWINDOWCAPTURE_DLL_PATH);
         }
 
         private string GeneratePairingPin()

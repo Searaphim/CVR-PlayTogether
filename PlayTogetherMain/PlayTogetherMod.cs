@@ -430,9 +430,11 @@ namespace PlayTogetherMod
             var pinPage = hostCat.AddPage("Friend pairing", "", "Enter pairing PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);
-            var aMixerBtn = hostCat.AddButton("Audio Mixer", "dummy.png", "Opens on your Desktop");
+            var hostConfPage = hostCat.AddPage("Config", "dummy.png","Host configurations", "CVRPlayTogether");
+            var hostAudioCat = hostConfPage.AddCategory("Audio");
+            var aMixerBtn = hostAudioCat.AddButton("Audio Mixer", "dummy.png", "Opens on your Desktop");
             aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
-            var aListen = hostCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
+            var aListen = hostAudioCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
             aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
             hostToggle.OnValueUpdated += async b =>
             {

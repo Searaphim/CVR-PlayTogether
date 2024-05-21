@@ -128,6 +128,7 @@ namespace PlayTogetherMod
 
         private void FlushConfigs()
         {
+            if (!Directory.Exists(APPSCONF_DIR)) return;
             string[] files = Directory.GetFiles(APPSCONF_DIR);
             foreach (string file in files)
             {
@@ -318,15 +319,19 @@ namespace PlayTogetherMod
             NativeLibrary.LoadLib(destPath);
         }
 
-        private void DeleteFolderContents(string folderPath)
+        private void DeleteAllFolderContents(string folderPath)
         {
+            if (!Directory.Exists(folderPath))
+            {
+                return;
+            }
             foreach (string filePath in Directory.GetFiles(folderPath))
             {
                 File.Delete(filePath);
             }
             foreach (string subFolderPath in Directory.GetDirectories(folderPath))
             {
-                DeleteFolderContents(subFolderPath);
+                DeleteAllFolderContents(subFolderPath);
                 Directory.Delete(subFolderPath);
             }
         }
@@ -334,11 +339,11 @@ namespace PlayTogetherMod
         private void UnpackResources()
         {
             ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
-            DeleteFolderContents(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
+            DeleteAllFolderContents(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
             zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
             zip.Dispose();
             zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
-            DeleteFolderContents(SharedVars.RESOURCE_FOLDER);
+            DeleteAllFolderContents(SharedVars.RESOURCE_FOLDER);
             zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER);
             DLLResourceLoader(UWINDOWCAPTURE_RESOURCE, SharedVars.UWINDOWCAPTURE_DLL_PATH);
         }
@@ -460,7 +465,7 @@ namespace PlayTogetherMod
             {
                 if (b == true)
                 {
-                    if (!AudioHelper.CheckAudioConfig())
+                    if (!AudioHelper.CheckAudioConfig()) //Adding a post-launch check as well is worth considering
                     {
                         QuickMenuAPI.ShowConfirm("Audio Config Notice",
                             "*PLEASE READ*: Hosting requires special audio configuration and improper configuration has been detected. You only need to do this once. Click 'Quick Guide' to pop a Web guide on your desktop.",

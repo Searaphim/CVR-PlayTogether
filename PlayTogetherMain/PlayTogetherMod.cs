@@ -135,9 +135,18 @@ namespace PlayTogetherMod
             }
         }
 
+        private void GenerateConfigs()
+        {
+            if(!Directory.Exists(APPSCONF_DIR))
+                Directory.CreateDirectory(APPSCONF_DIR);
+
+            File.WriteAllText(SETTINGS_PATH, "virtual_sink = VB-Audio Virtual Cable");
+        }
+
         public void Run(string appPath)
         {
             FlushConfigs();
+            GenerateConfigs();
             CreateUser();
             _HostedAppName = Path.GetFileNameWithoutExtension(appPath);
             string appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
@@ -421,10 +430,26 @@ namespace PlayTogetherMod
             var pinPage = hostCat.AddPage("Friend pairing", "", "Enter pairing PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);
+            var aMixerBtn = hostCat.AddButton("Audio Mixer", "dummy.png", "Opens on your Desktop");
+            aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
+            var aListen = hostCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
+            aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
             hostToggle.OnValueUpdated += async b =>
             {
                 if (b == true)
                 {
+                    if (!AudioHelper.CheckAudioConfig())
+                    {
+                        QuickMenuAPI.ShowConfirm("Audio Config Notice",
+                            "PLEASE READ: Hosting requires special audio configuration and improper configuration has been detected. You only need to do this once. Click 'Quick Guide' to pop a Web guide on your desktop.",
+                            () => { AudioHelper.PopSoundGuide(); },
+                            () => { },
+                            "Quick Guide",
+                            "Cancel"
+                        );
+                        hostToggle.ToggleValue = false;
+                        return;
+                    }
                     QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
                     hostToggle.Disabled = true;
                     var filePath = await FileBrowser.BrowseForFile();
@@ -619,6 +644,8 @@ namespace PlayTogetherMod
         public override void OnInitializeMelon()
         {
             UnpackResources();
+            //AudioHelper audioHelper = new AudioHelper();
+            //audioHelper.SetAudioDeviceAlt(audioHelper.GetCurrentProcessId(), "ROOT\\MEDIA\\0000"); //VBAudioVACWDM 
 
             //Our CCK Prop contains a custom MonoBehavior script component. We force-allow it here.
             var propWhitelist = SharedFilter._spawnableWhitelist;

@@ -143,7 +143,12 @@ namespace PlayTogetherMod.Utils
 
         private static void WindowsRun(string cmd)
         {
-            Process.Start("cmd.exe", "/k start " + cmd);
+            var pInfo = new ProcessStartInfo{ 
+                FileName = "cmd.exe",
+                Arguments = "/c start " + cmd,
+                CreateNoWindow = true
+            };
+            Process.Start(pInfo);
         }
 
         public static void PopSoundGuide()

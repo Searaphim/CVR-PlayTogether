@@ -463,7 +463,7 @@ namespace PlayTogetherMod
                     if (!AudioHelper.CheckAudioConfig())
                     {
                         QuickMenuAPI.ShowConfirm("Audio Config Notice",
-                            "PLEASE READ: Hosting requires special audio configuration and improper configuration has been detected. You only need to do this once. Click 'Quick Guide' to pop a Web guide on your desktop.",
+                            "*PLEASE READ*: Hosting requires special audio configuration and improper configuration has been detected. You only need to do this once. Click 'Quick Guide' to pop a Web guide on your desktop.",
                             () => { AudioHelper.PopSoundGuide(); },
                             () => { },
                             "Quick Guide",

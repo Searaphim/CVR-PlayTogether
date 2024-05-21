@@ -338,12 +338,11 @@ namespace PlayTogetherMod
 
         private void UnpackResources()
         {
+            DeleteAllFolderContents(SharedVars.RESOURCE_FOLDER);
             ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
-            DeleteAllFolderContents(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
             zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
             zip.Dispose();
             zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
-            DeleteAllFolderContents(SharedVars.RESOURCE_FOLDER);
             zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER);
             DLLResourceLoader(UWINDOWCAPTURE_RESOURCE, SharedVars.UWINDOWCAPTURE_DLL_PATH);
         }
@@ -461,6 +460,8 @@ namespace PlayTogetherMod
             aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
             var aListen = hostAudioCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
             aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
+            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Pair yourself with a Host", "CVRPlayTogether");
+            var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
             hostToggle.OnValueUpdated += async b =>
             {
                 if (b == true)
@@ -487,6 +488,8 @@ namespace PlayTogetherMod
                         _sunshine.Run(filePath);
                         pinPage.Disabled = false;
                         viewCodeButton.Disabled = false;
+                        pairPage.Disabled = true;
+                        joinToggle.Disabled = true;
                     }
                     else
                     {
@@ -499,6 +502,8 @@ namespace PlayTogetherMod
                     LoggerInstance.Msg($"Hosting terminated.");
                     pinPage.Disabled = true;
                     viewCodeButton.Disabled = true;
+                    pairPage.Disabled = false;
+                    joinToggle.Disabled = false;
                 }
             };
             var pinNumpad = pinPage.AddCategory("PIN KEYBOARD");
@@ -549,8 +554,6 @@ namespace PlayTogetherMod
                 };
             }
 
-            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Pair yourself with a Host", "CVRPlayTogether");
-            var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
             joinToggle.OnValueUpdated += b =>
             {
                 if(b == true)

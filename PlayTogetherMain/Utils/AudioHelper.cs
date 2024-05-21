@@ -145,7 +145,7 @@ namespace PlayTogetherMod.Utils
 
         public static void PopSoundGuide()
         {
-            WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Audio");
+            WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Audio-Setup-Quick-Guide");
         }
 
         public static void PopW10SoundMixer()

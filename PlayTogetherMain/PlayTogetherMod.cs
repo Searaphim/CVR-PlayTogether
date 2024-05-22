@@ -488,8 +488,6 @@ namespace PlayTogetherMod
                         _sunshine.Run(filePath);
                         pinPage.Disabled = false;
                         viewCodeButton.Disabled = false;
-                        pairPage.Disabled = true;
-                        joinToggle.Disabled = true;
                     }
                     else
                     {
@@ -502,8 +500,6 @@ namespace PlayTogetherMod
                     LoggerInstance.Msg($"Hosting terminated.");
                     pinPage.Disabled = true;
                     viewCodeButton.Disabled = true;
-                    pairPage.Disabled = false;
-                    joinToggle.Disabled = false;
                 }
             };
             var pinNumpad = pinPage.AddCategory("PIN KEYBOARD");

@@ -307,6 +307,37 @@ namespace PlayTogetherMod
         private IEnumerable<Process> _processList;
         private IEnumerator<Process> _processEnum;
 
+        private bool CheckGamepadDriver()
+        {
+            ProcessStartInfo credsProc = new ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = "-c Exit $(if ((Get-Item \"$env:SystemRoot\\System32\\drivers\\ViGEmBus.sys\").VersionInfo.FileVersion -ge [System.Version]\"1.17\") { 2 } Else { 1 })",
+                CreateNoWindow = true
+            };
+            Process shortProc = Process.Start(credsProc); //Not a concern since we dont expose the interface to the internet
+            shortProc.WaitForExit();
+            if (shortProc.ExitCode == 2)
+                return true;
+            return false;
+        }
+
+        private void UIHandleGPDriver()
+        {
+            if (!CheckGamepadDriver())
+            {
+                QuickMenuAPI.ShowConfirm
+                (
+                    "Gamepad Support Info",
+                    "[!] Your system has a missing or outdated critical component for gamepad support. Clicking 'Proceed' will open a link on your browser for you to download and install 'ViGEmBus_1.22.0_x64_x86_arm64.exe'",
+                    () => { Misc.WindowsRun("https://github.com/nefarius/ViGEmBus/releases/tag/v1.22.0"); },
+                    null,
+                    "Proceed",
+                    "Ignore"
+                );
+            }
+        }
+
         private void DLLResourceLoader(string sourcePath, string destPath)
         {
             byte[] dllBytes = null;
@@ -466,6 +497,7 @@ namespace PlayTogetherMod
             {
                 if (b == true)
                 {
+                    UIHandleGPDriver();
                     if (!AudioHelper.CheckAudioConfig()) //Adding a post-launch check as well is worth considering
                     {
                         QuickMenuAPI.ShowConfirm("Audio Config Notice",
@@ -554,6 +586,7 @@ namespace PlayTogetherMod
             {
                 if(b == true)
                 {
+                    UIHandleGPDriver();
                     _moonlight.Run();
                 }
                 else

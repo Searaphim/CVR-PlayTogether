@@ -132,35 +132,24 @@ namespace PlayTogetherMod.Utils
             }
         }
 
-        private static void WindowsRun(string cmd)
-        {
-            var pInfo = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = "/c start " + cmd,
-                CreateNoWindow = true
-            };
-            Process.Start(pInfo);
-        }
-
         public static void PopSoundGuide()
         {
-            WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Audio-Setup-Quick-Guide");
+            Misc.WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Audio-Setup-Quick-Guide");
         }
 
         public static void PopW10SoundMixer()
         {
-            WindowsRun("ms-settings:apps-volume");
+            Misc.WindowsRun("ms-settings:apps-volume");
         }
 
         public static void PopSoundRecorders()
         {
-            WindowsRun("rundll32.exe Shell32.dll,Control_RunDLL Mmsys.cpl,,1");
+            Misc.WindowsRun("rundll32.exe Shell32.dll,Control_RunDLL Mmsys.cpl,,1");
         }
 
         public static void PopVBCablePage()
         {
-            WindowsRun("https://vb-audio.com/Cable/");
+            Misc.WindowsRun("https://vb-audio.com/Cable/");
         }
 
         public static bool isVBCableInstalled()

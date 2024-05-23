@@ -397,13 +397,10 @@ namespace PlayTogetherMod
 
             var sliderFPS = globalCat.AddSlider("FPS", "Adjust the framerate.", 30f, 0f, 144f);
             var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "Toggle Mode", true);
-            var cycleWindowBtnFwd = globalCat.AddButton("Cycle Window =>", "", "Cycle through Windows");
-            cycleWindowBtnFwd.Disabled = true;
             desktopModeToggle.OnValueUpdated += b =>
             {
                 if (b == true)
                 {
-                    cycleWindowBtnFwd.Disabled = true;
                     Dictionary<string, object> changes = new Dictionary<string, object>
                     {
                         {"type", WindowTextureType.Desktop}
@@ -420,7 +417,6 @@ namespace PlayTogetherMod
                     _processList = processes;
                     if(processes.Length != 0) //Means we're currently hosting an app.
                     {
-                        cycleWindowBtnFwd.Disabled = false;
                         _processList = processes;
                         _processEnum = _processList.GetEnumerator();
                         _processEnum.MoveNext();
@@ -442,22 +438,6 @@ namespace PlayTogetherMod
                     EditUwcWindowTextures(sceneInstance, changes, false);
                     MelonLogger.Msg($"Window mode applied.");
                 }
-            };
-            cycleWindowBtnFwd.OnPress += () =>
-            {
-                if (!_processEnum.MoveNext()) {
-                    _processEnum.Reset();
-                    _processEnum.MoveNext();
-                }
-                var windowTitle = _processEnum.Current.MainWindowTitle;
-                Dictionary<string, object> changes = new Dictionary<string, object>
-                {
-                    {"partialWindowTitle", windowTitle}
-                };
-                Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
-                if (!sceneInstance.IsValid()) return;
-                EditUwcWindowTextures(sceneInstance, changes, false);
-                MelonLogger.Msg($"Title3: {windowTitle}");
             };
             var buttonApply = globalCat.AddButton("Apply", "", "Apply settings to active screens");
             buttonApply.OnPress += () =>

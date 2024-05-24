@@ -141,7 +141,10 @@ namespace PlayTogetherMod
             if(!Directory.Exists(APPSCONF_DIR))
                 Directory.CreateDirectory(APPSCONF_DIR);
 
-            File.WriteAllText(SETTINGS_PATH, "virtual_sink = VB-Audio Virtual Cable");
+            string settingsStr = "virtual_sink = VB-Audio Virtual Cable\r\n" +
+                                 "keyboard = disabled\r\n" +
+                                 "mouse = disabled\r\n";
+            File.WriteAllText(SETTINGS_PATH, settingsStr);
         }
 
         public void Run(string appPath)

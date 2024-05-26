@@ -42,7 +42,7 @@ namespace PlayTogetherMod
 
         private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
         private Process? normalprocess;
-        private string _url = "https://localhost:47990/api/pin"; //Security could be further increased by changing LAN restriction to localhost only.
+        private string _url = "https://localhost:47990/api/pin";
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
         private string _HostedAppName = "";
@@ -143,7 +143,8 @@ namespace PlayTogetherMod
 
             string settingsStr = "virtual_sink = VB-Audio Virtual Cable\r\n" +
                                  "keyboard = disabled\r\n" +
-                                 "mouse = disabled\r\n";
+                                 "mouse = disabled\r\n" +
+                                 "origin_web_ui_allowed = pc\r\n";
             File.WriteAllText(SETTINGS_PATH, settingsStr);
         }
 

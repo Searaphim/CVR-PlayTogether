@@ -443,7 +443,7 @@ namespace PlayTogetherMod
                     MelonLogger.Msg($"Window mode applied.");
                 }
             };
-            var buttonApply = globalCat.AddButton("Apply", "", "Apply settings to active screens");
+            var buttonApply = globalCat.AddButton("Apply FPS", "", "Apply setting to active screens");
             buttonApply.OnPress += () =>
             {
                 int framerate = (int)Math.Round(sliderFPS.SliderValue, 0);

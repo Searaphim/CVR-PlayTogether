@@ -9,6 +9,9 @@ It depends on ChilloutVR's prop system and needs a custom [CCK-PlayTogether](htt
 
 It uses [MelonLoader](https://melonwiki.xyz/#/) as it's injection method.
 
+![ChilloutVR-2024-05-26_17-53-30](https://github.com/Searaphim/CVR-PlayTogether/assets/10776555/2a547e09-9645-41f0-8174-9b4ebd0ac2a4)
+
+
 Requirements
 ===================
 

@@ -24,6 +24,7 @@ using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Intero
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using System.ComponentModel;
 
 namespace PlayTogetherMod
 {
@@ -301,6 +302,7 @@ namespace PlayTogetherMod
     {
         private Page _rootPage;
         private const string PROP_SCENE = "AdditiveContentScene";
+        private const string MANAGER_SCENE = "DontDestroyOnLoad";
         private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
         private const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
         private const string UWINDOWCAPTURE_RESOURCE = "CVRPlayTogether.resources.uWindowCapture.dll";
@@ -310,6 +312,7 @@ namespace PlayTogetherMod
         private string _tempTargetLobbyCode = "";
         private IEnumerable<Process> _processList;
         private IEnumerator<Process> _processEnum;
+        private MonitorIterator _monitorIterator = new MonitorIterator();
 
         private bool CheckGamepadDriver()
         {
@@ -400,6 +403,18 @@ namespace PlayTogetherMod
             var globalCat = _rootPage.AddCategory("Global Settings");
 
             var sliderFPS = globalCat.AddSlider("FPS", "Adjust the framerate.", 30f, 0f, 144f);
+            var monitorCycleBtn = globalCat.AddButton("Change monitor", "", "Click to change to next monitor");
+            monitorCycleBtn.OnPress += () => 
+            {
+                _monitorIterator.SetMonitorCount(UwcManager.desktopCount);
+                Dictionary<string, object> changes = new Dictionary<string, object>
+                {
+                    {"desktopIndex", _monitorIterator.Next()}
+                };
+                Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                if (!sceneInstance.IsValid()) return;
+                EditUwcWindowTextures(sceneInstance, changes, false);
+            };
             var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "Toggle Mode", true);
             desktopModeToggle.OnValueUpdated += b =>
             {

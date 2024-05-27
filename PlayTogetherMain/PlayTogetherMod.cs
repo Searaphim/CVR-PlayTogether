@@ -498,7 +498,7 @@ namespace PlayTogetherMod
             aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
             var aListen = hostAudioCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
             aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
-            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Pair yourself with a Host", "CVRPlayTogether");
+            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Connect & Pair yourself to a Host", "CVRPlayTogether");
             var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
             hostToggle.OnValueUpdated += async b =>
             {
@@ -560,7 +560,7 @@ namespace PlayTogetherMod
                 };
                 var response = await _sunshine.SendPin(_pinInputs);
                 if (response)
-                    QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Success!", actionContinue);
+                    QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Success! The application will launch once a client has joined.", actionContinue);
                 else QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Failed.", actionContinue);
             };
             clearPinButton.OnPress += () =>

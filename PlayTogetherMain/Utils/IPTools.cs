@@ -25,6 +25,8 @@ namespace PlayTogetherMod.Utils
 
         internal static string LobbyCodeToIP(string lobbyCode)
         {
+            if (lobbyCode.Contains("."))
+                return lobbyCode;
             int roundedTime = (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600) / 7200 * 7200;
             uint codeAsInt = 0;
             if(uint.TryParse(lobbyCode, out codeAsInt))

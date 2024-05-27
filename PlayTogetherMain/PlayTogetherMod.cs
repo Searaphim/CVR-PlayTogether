@@ -391,6 +391,14 @@ namespace PlayTogetherMod
             return random.Next(10000).ToString("D4");
         }
 
+        private int GetLobbyCodeMaxDigits(string codeStr)
+        {
+            if (codeStr.Contains("."))
+                return 15;
+            else
+                return 10;
+        }
+
         private void MakeUI()
         {
             //!! Page() cannot have special characters for modName
@@ -565,7 +573,7 @@ namespace PlayTogetherMod
             for(int i =0; i < 10; i++)
             {
                 int buttonNumber = i;
-                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
+                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", "", ButtonStyle.TextOnly));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
                     if (_pinInputs.Length < 4)
@@ -621,18 +629,34 @@ namespace PlayTogetherMod
                 lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 lobbyCodeButtons[buttonNumber].OnPress += () =>
                 {
-                    if (_tempTargetLobbyCode.Length < 10)
+                    var maxDigits = GetLobbyCodeMaxDigits(_tempTargetLobbyCode);
+                    if (_tempTargetLobbyCode.Length < maxDigits)
                     {
                         _tempTargetLobbyCode = _tempTargetLobbyCode + buttonNumber.ToString();
                         connectButton.ButtonText = _tempTargetLobbyCode;
                     }
-                    if (_tempTargetLobbyCode.Length == 10)
+                    if (_tempTargetLobbyCode.Length == maxDigits)
                     {
                         connectButton.ButtonText = _tempTargetLobbyCode;
                         lobbyNumpad.Disabled = true;
                     }
                 };
             }
+            var dotButton = lobbyNumpad.AddButton(".", "dummy.png", "");
+            dotButton.OnPress += () =>
+            {
+                var maxDigits = GetLobbyCodeMaxDigits(_tempTargetLobbyCode);
+                if (_tempTargetLobbyCode.Length < maxDigits)
+                {
+                    _tempTargetLobbyCode = _tempTargetLobbyCode + ".";
+                    connectButton.ButtonText = _tempTargetLobbyCode;
+                }
+                if (_tempTargetLobbyCode.Length == maxDigits)
+                {
+                    connectButton.ButtonText = _tempTargetLobbyCode;
+                    lobbyNumpad.Disabled = true;
+                }
+            };
         }
 
         public void EditUwcWindowTextures(Scene sceneInstance, Dictionary<string, object> propertyChanges, bool isField)

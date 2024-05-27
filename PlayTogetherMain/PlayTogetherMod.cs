@@ -610,7 +610,7 @@ namespace PlayTogetherMod
                     return;
                 var pairingPin = GeneratePairingPin();
                 QuickMenuAPI.ShowNotice("Pairing Pin", 
-                    $"Please only press OK after Pairing succeeded or failed. The host will tell you -> They must enter this pin to approve your connection: {pairingPin}",
+                    $"Please only press OK after Pairing succeeded or failed. The host will tell you. -> They must enter this pin to approve your connection: {pairingPin}",
                     () => { 
                             _moonlight.StopPairing();
                         _rootPage.OpenPage();

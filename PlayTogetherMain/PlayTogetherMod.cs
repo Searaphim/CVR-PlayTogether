@@ -17,24 +17,47 @@ using MelonLoader.TinyJSON;
 using PlayTogetherMod.Utils;
 using BTKUILib.UIObjects.Components;
 using System.Text.RegularExpressions;
-
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Interop.InteropMethods;
+using System.Threading.Tasks;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+using System.ComponentModel;
 
 namespace PlayTogetherMod
 {
     public class SharedVars
     {
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
+        public const string UWINDOWCAPTURE_DLL_PATH = @"ChilloutVR_Data\Plugins\x86_64\uWindowCapture.dll";
     }
 
     public class Sunshine
     {
         private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\sunshine.exe";
-        private const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; // Multicast may or may not be necessary for multiple clients, idk.
+        private const string SETTINGS_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config\sunshine.conf"; // Multicast may or may not be necessary for multiple clients, idk yet.
         private const string APPSDEFCONF_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\assets\apps.json";
         private const string APPSCONF_DIR = SharedVars.RESOURCE_FOLDER + @"\Sunshine\config";
+
         private const string APPSCONF_PATH = APPSCONF_DIR + @"\apps.json";
-        private Process normalprocess;
-        private StreamWriter streamWriter;
+        private Process? normalprocess;
+        private string _url = "https://localhost:47990/api/pin";
+        private string _usr = "defaultusr";
+        private string _pwd = "defaultpwd";
+        private string _HostedAppName = "";
+
+        public string HostedAppName
+        {
+            get { return _HostedAppName; }
+            set { _HostedAppName = value; } 
+        }
+
+        ~Sunshine() {
+            Stop();
+        }
+
         // Apps file is only read on launch so sunshine needs to restart on edit. Probably the same for other confs.
         // channels=3 (3 distinct streams) //3 for 4 players
         // Configuration variables can be overwritten on the command line: "name=value" --> it can be usefull to set min_log_level=debug without modifying the configuration file
@@ -42,39 +65,113 @@ namespace PlayTogetherMod
         {
             FileName = EXE_PATH,
             WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
-            Arguments = "-p -0",
+            Arguments = "-p",
             UseShellExecute = false,
-            RedirectStandardInput = true,
+            RedirectStandardInput = false,
             RedirectStandardOutput = false
         };
         // Make a warning for users to make sure apps they add are always launched fullscreen for privacy reasons. Atl-tabbing risky, theres probably a way to prevent desktop from streaming. (apps.json?)
 
-        public void SendPin(string pin)
+        public void CreateUser()
         {
-            streamWriter.WriteLine(pin);
+            ProcessStartInfo credsProc = new ProcessStartInfo
+            {
+                FileName = EXE_PATH,
+                WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Sunshine",
+                Arguments = $"--creds {_usr} {_pwd}",
+                UseShellExecute = false,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false
+            };
+            Process shortProc = Process.Start(credsProc); //Not a concern since we dont expose the interface to the internet
+            shortProc.WaitForExit();
+            shortProc.Dispose();
+        }
+
+        public async Task<bool> SendPin(string pin)
+        {
+            //Disables certificates. For now Im not sure how to add the server's certificate to the unity runtime's trust store or if I even should.
+            RemoteCertificateValidationCallback cbCertValidation = (sender, certificate, chain, sslPolicyErrors) => true;
+            ServicePointManager.ServerCertificateValidationCallback += cbCertValidation;
+            try
+            {
+                var handler = new HttpClientHandler { Credentials = new NetworkCredential(_usr, _pwd) };
+                var client = new HttpClient(handler);
+                var request = new HttpRequestMessage(HttpMethod.Post, _url);
+                var payload = @"{""pin"":""" + pin + @"""}";
+                var content = new StringContent(payload, Encoding.UTF8, "text/plain");
+                request.Content = content;
+                var response = await client.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+                var responseContent = await response.Content.ReadAsStringAsync();
+                // Parse the response using regular expressions
+                var regex = new Regex(@"\{\s*""status""\s*:\s*""(true|false)""\s*\}");
+                var match = regex.Match(responseContent);
+                if (match.Success)
+                {
+                    var status = match.Groups[1].Value;
+                    return status == "true";
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch(Exception ex)
+            {
+                return false;
+            }
+            finally {
+                //Restore default certification validation
+                ServicePointManager.ServerCertificateValidationCallback -= cbCertValidation;
+            }
         }
 
         private void FlushConfigs()
         {
-            if(Directory.Exists(APPSCONF_DIR))
-                Directory.Delete(APPSCONF_DIR, true);
+            if (!Directory.Exists(APPSCONF_DIR)) return;
+            string[] files = Directory.GetFiles(APPSCONF_DIR);
+            foreach (string file in files)
+            {
+                File.Delete(file);
+            }
+        }
+
+        private void GenerateConfigs()
+        {
+            if(!Directory.Exists(APPSCONF_DIR))
+                Directory.CreateDirectory(APPSCONF_DIR);
+
+            string settingsStr = "virtual_sink = VB-Audio Virtual Cable\r\n" +
+                                 "keyboard = disabled\r\n" +
+                                 "mouse = disabled\r\n" +
+                                 "origin_web_ui_allowed = pc\r\n";
+            File.WriteAllText(SETTINGS_PATH, settingsStr);
         }
 
         public void Run(string appPath)
         {
             FlushConfigs();
-            string appstr = @"{""name"":""" + Path.GetFileNameWithoutExtension(appPath) + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
+            GenerateConfigs();
+            CreateUser();
+            _HostedAppName = Path.GetFileNameWithoutExtension(appPath);
+            string appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
+            File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);
-            streamWriter = normalprocess.StandardInput;
         }
 
         public void Stop()
         {
-            if (!normalprocess.HasExited)
+            if (normalprocess != null)
             {
-                normalprocess.Kill();
-                normalprocess.WaitForExit();
+                if (!normalprocess.HasExited)
+                {
+                    normalprocess.Kill();
+                    normalprocess.WaitForExit();
+                }
+                normalprocess.Dispose();
+                normalprocess = null;
             }
         }
     }
@@ -83,8 +180,17 @@ namespace PlayTogetherMod
     {
         private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight.exe";
         private const string INI_PATH = SharedVars.RESOURCE_FOLDER + @"\Moonlight\Moonlight Game Streaming Project\Moonlight.ini";
-        private Process _sessionProc;
+        private Process? _sessionProc = null;
+        private Process? _pairprocess = null;
         private string _lobbyCode = "";
+        private string _lobbyDestination = "";
+
+        public Process? SessionProcess { get { return _sessionProc; } }
+
+        ~Moonlight() {
+            StopPairing();
+            StopSession();
+        }
 
         public string LobbyCode
         {
@@ -92,16 +198,32 @@ namespace PlayTogetherMod
             set { _lobbyCode = value; }
         }
 
+        private string? GetHostAppTitle()
+        {
+            return new IniParserHelper().ExtractAppName(INI_PATH);
+        }
+
+        private void FlushConfigs()
+        {
+            if (File.Exists(INI_PATH))
+            {
+                File.Delete(INI_PATH);
+            }
+        }
+
         public void PairWithHost(string pairPin)
         {
-            Process pairprocess = Process.Start(new ProcessStartInfo()
+            StopPairing();
+            FlushConfigs();
+            _lobbyDestination = LobbyCodeHandler.LobbyCodeToIP(_lobbyCode);
+            _pairprocess = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
-                Arguments = $"pair {LobbyCodeHandler.LobbyCodeToIP(_lobbyCode)} --pin {pairPin}",
+                Arguments = $"pair {_lobbyDestination} --pin {pairPin}",
                 UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false
             });
         }
 
@@ -111,33 +233,67 @@ namespace PlayTogetherMod
                 File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
         }
 
-        private void StartSession(string host)
+        public bool IsAppBlacklisted(string appTitle)
         {
-            if(host == "")
+            if(appTitle == "Desktop")
+                return true;
+            return false;
+        }
+
+        private void StartSession(string host, string? hostAppTitle)
+        {
+            if ((hostAppTitle == null) || (hostAppTitle == "") || (host == "") || (host == null))
             {
                 return;
             }
+            if (IsAppBlacklisted(hostAppTitle))
+                return;
             _sessionProc = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
                 WorkingDirectory = SharedVars.RESOURCE_FOLDER + @"\Moonlight",
+                Arguments = @$"stream {host} ""{hostAppTitle}""",
                 UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false
             });
         }
 
         public void Run()
         {
-            StartSession(LobbyCodeHandler.LobbyCodeToIP(_lobbyCode));
+            StartSession(_lobbyDestination, GetHostAppTitle());
         }
 
-        public void Stop()
+        private bool StopProcess(Process? proc)
         {
-            if (!_sessionProc.HasExited)
+            if (proc != null)
             {
-                _sessionProc.Kill();
-                _sessionProc.WaitForExit();
+                if (!proc.HasExited)
+                {
+                    proc.Kill();
+                    proc.WaitForExit();
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public void StopPairing()
+        {
+            if (StopProcess(_pairprocess))
+            {
+                _pairprocess.Dispose();
+                _pairprocess = null;
+            }
+
+        }
+
+        public void StopSession()
+        {
+            if (StopProcess(_sessionProc))
+            {
+                _sessionProc.Dispose();
+                _sessionProc = null;
             }
         }
     }
@@ -146,20 +302,87 @@ namespace PlayTogetherMod
     {
         private Page _rootPage;
         private const string PROP_SCENE = "AdditiveContentScene";
+        private const string MANAGER_SCENE = "DontDestroyOnLoad";
         private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
         private const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
+        private const string UWINDOWCAPTURE_RESOURCE = "CVRPlayTogether.resources.uWindowCapture.dll";
         private Sunshine _sunshine;
         private Moonlight _moonlight;
         private string _pinInputs = "";
-        private string _targetLobbyCode = "";
+        private string _tempTargetLobbyCode = "";
+        private IEnumerable<Process> _processList;
+        private IEnumerator<Process> _processEnum;
+        private MonitorIterator _monitorIterator = new MonitorIterator();
+
+        private bool CheckGamepadDriver()
+        {
+            ProcessStartInfo credsProc = new ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = "-c Exit $(if ((Get-Item \"$env:SystemRoot\\System32\\drivers\\ViGEmBus.sys\").VersionInfo.FileVersion -ge [System.Version]\"1.17\") { 2 } Else { 1 })",
+                CreateNoWindow = true
+            };
+            Process shortProc = Process.Start(credsProc); //Not a concern since we dont expose the interface to the internet
+            shortProc.WaitForExit();
+            if (shortProc.ExitCode == 2)
+                return true;
+            return false;
+        }
+
+        private void UIHandleGPDriver()
+        {
+            if (!CheckGamepadDriver())
+            {
+                QuickMenuAPI.ShowConfirm
+                (
+                    "Gamepad Support Info",
+                    "[!] Your system has a missing or outdated critical component for gamepad support. Clicking 'Proceed' will open a link on your browser for you to download and install 'ViGEmBus_1.22.0_x64_x86_arm64.exe'",
+                    () => { Misc.WindowsRun("https://github.com/nefarius/ViGEmBus/releases/tag/v1.22.0"); },
+                    null,
+                    "Proceed",
+                    "Ignore"
+                );
+            }
+        }
+
+        private void DLLResourceLoader(string sourcePath, string destPath)
+        {
+            byte[] dllBytes = null;
+            using (Stream stm = Assembly.GetExecutingAssembly().GetManifestResourceStream(sourcePath))
+            {
+                dllBytes = new byte[(int)stm.Length];
+                stm.Read(dllBytes, 0, (int)stm.Length);
+            }
+            File.WriteAllBytes(destPath, dllBytes);
+            NativeLibrary.LoadLib(destPath);
+        }
+
+        private void DeleteAllFolderContents(string folderPath)
+        {
+            if (!Directory.Exists(folderPath))
+            {
+                return;
+            }
+            foreach (string filePath in Directory.GetFiles(folderPath))
+            {
+                File.Delete(filePath);
+            }
+            foreach (string subFolderPath in Directory.GetDirectories(folderPath))
+            {
+                DeleteAllFolderContents(subFolderPath);
+                Directory.Delete(subFolderPath);
+            }
+        }
 
         private void UnpackResources()
         {
+            DeleteAllFolderContents(SharedVars.RESOURCE_FOLDER);
             ZipArchive zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(MOONLIGHT_RESOURCE));
-            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER + @"\Moonlight", true);
+            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER + @"\Moonlight");
             zip.Dispose();
             zip = new ZipArchive(Assembly.GetExecutingAssembly().GetManifestResourceStream(SUNSHINE_RESOURCE));
-            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER, true);
+            zip.ExtractToDirectory(SharedVars.RESOURCE_FOLDER);
+            DLLResourceLoader(UWINDOWCAPTURE_RESOURCE, SharedVars.UWINDOWCAPTURE_DLL_PATH);
         }
 
         private string GeneratePairingPin()
@@ -180,19 +403,73 @@ namespace PlayTogetherMod
             var globalCat = _rootPage.AddCategory("Global Settings");
 
             var sliderFPS = globalCat.AddSlider("FPS", "Adjust the framerate.", 30f, 0f, 144f);
-            var buttonApply = globalCat.AddButton("Apply", "", "Apply settings to active screens");
-            buttonApply.OnPress += () =>
+            var monitorCycleBtn = globalCat.AddButton("Change monitor", "", "Click to change to next monitor");
+            monitorCycleBtn.OnPress += () => 
             {
+                _monitorIterator.SetMonitorCount(UwcManager.desktopCount);
+                Dictionary<string, object> changes = new Dictionary<string, object>
+                {
+                    {"desktopIndex", _monitorIterator.Next()}
+                };
                 Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                 if (!sceneInstance.IsValid()) return;
-                GameObject[] gObjs = sceneInstance.GetRootGameObjects();
-                foreach (var item in gObjs)
+                EditUwcWindowTextures(sceneInstance, changes, false);
+            };
+            var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "Toggle Mode", true);
+            desktopModeToggle.OnValueUpdated += b =>
+            {
+                if (b == true)
                 {
-                    uWindowCapture.UwcWindowTexture comp = item.gameObject.GetComponentInChildren<uWindowCapture.UwcWindowTexture>();
-                    if (comp == null) return;
-                    comp.captureFrameRate = (int)Math.Round(sliderFPS.SliderValue, 0);
-                    //TODO: Add the rest of the settings here
+                    Dictionary<string, object> changes = new Dictionary<string, object>
+                    {
+                        {"type", WindowTextureType.Desktop}
+                    };
+                    Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                    if (!sceneInstance.IsValid()) return;
+                    EditUwcWindowTextures(sceneInstance, changes, false);
+                    MelonLogger.Msg($"Desktop mode applied.");
                 }
+                else
+                {
+                    string windowTitle = "";
+                    Process[] processes = Process.GetProcessesByName(_sunshine.HostedAppName);
+                    _processList = processes;
+                    if(processes.Length != 0) //Means we're currently hosting an app.
+                    {
+                        _processList = processes;
+                        _processEnum = _processList.GetEnumerator();
+                        _processEnum.MoveNext();
+                        windowTitle = _processEnum.Current.MainWindowTitle;
+                        MelonLogger.Msg($"Title1: {windowTitle}");
+                    }
+                    else { //Means we're not hosting an app. //We stay on Desktop Mode if both moonlight and sunshine arent doing anything
+                        if (_moonlight.SessionProcess == null) return;
+                        windowTitle = _moonlight.SessionProcess.MainWindowTitle;
+                        MelonLogger.Msg($"Title2: {windowTitle}");
+                    }
+                    Dictionary<string, object> changes = new Dictionary<string, object>
+                    {
+                        {"type", WindowTextureType.Window},
+                        {"partialWindowTitle", windowTitle}
+                    };
+                    Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                    if (!sceneInstance.IsValid()) return;
+                    EditUwcWindowTextures(sceneInstance, changes, false);
+                    MelonLogger.Msg($"Window mode applied.");
+                }
+            };
+            var buttonApply = globalCat.AddButton("Apply FPS", "", "Apply setting to active screens");
+            buttonApply.OnPress += () =>
+            {
+                int framerate = (int)Math.Round(sliderFPS.SliderValue, 0);
+                Dictionary<string, object> changes = new Dictionary<string, object>
+                {
+                    {"captureFrameRate", framerate}
+                };
+                Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
+                if (!sceneInstance.IsValid()) return;
+                EditUwcWindowTextures(sceneInstance, changes, true);
+                MelonLogger.Msg($"Applied fps: {framerate}");
             };
 
             var hostCat = _rootPage.AddCategory("Game Hosting");
@@ -207,11 +484,35 @@ namespace PlayTogetherMod
             var pinPage = hostCat.AddPage("Friend pairing", "", "Enter pairing PIN", "CVRPlayTogether");
             pinPage.Disabled = true;
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);
-            hostToggle.OnValueUpdated += b =>
+            var hostConfPage = hostCat.AddPage("Config", "dummy.png","Host configurations", "CVRPlayTogether");
+            var hostAudioCat = hostConfPage.AddCategory("Audio");
+            var aMixerBtn = hostAudioCat.AddButton("Audio Mixer", "dummy.png", "Opens on your Desktop");
+            aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
+            var aListen = hostAudioCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
+            aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
+            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Pair yourself with a Host", "CVRPlayTogether");
+            var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
+            hostToggle.OnValueUpdated += async b =>
             {
                 if (b == true)
                 {
-                    var filePath = FileBrowser.BrowseForFile();
+                    UIHandleGPDriver();
+                    if (!AudioHelper.CheckAudioConfig()) //Adding a post-launch check as well is worth considering
+                    {
+                        QuickMenuAPI.ShowConfirm("Audio Config Notice",
+                            "*PLEASE READ*: Hosting requires special audio configuration and improper configuration has been detected. You only need to do this once. Click 'Quick Guide' to pop a Web guide on your desktop.",
+                            () => { AudioHelper.PopSoundGuide(); },
+                            () => { },
+                            "Quick Guide",
+                            "Cancel"
+                        );
+                        hostToggle.ToggleValue = false;
+                        return;
+                    }
+                    QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
+                    hostToggle.Disabled = true;
+                    var filePath = await FileBrowser.BrowseForFile();
+                    hostToggle.Disabled = false;
                     LoggerInstance.Msg($"Selected file: {filePath}");
                     if (filePath != "")
                     {
@@ -236,14 +537,24 @@ namespace PlayTogetherMod
             Category sendPinCat;
             sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
             var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
-            sendPinButton.OnPress += () =>
-            {
-                _sunshine.SendPin(_pinInputs);
-                pinNumpad.Disabled = false;
-                _pinInputs = "";
-                sendPinButton.ButtonText = _pinInputs;
-            };
             var clearPinButton = sendPinCat.AddButton("Clear", "", "Clear PIN");
+            sendPinButton.OnPress += async () =>
+            {
+                sendPinButton.Disabled = true;
+                clearPinButton.Disabled = true;
+                Action actionContinue = () =>
+                {
+                    pinNumpad.Disabled = false;
+                    _pinInputs = "";
+                    sendPinButton.ButtonText = _pinInputs;
+                    sendPinButton.Disabled = false;
+                    clearPinButton.Disabled = false;
+                };
+                var response = await _sunshine.SendPin(_pinInputs);
+                if (response)
+                    QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Success!", actionContinue);
+                else QuickMenuAPI.ShowNotice("Pairing Result", "Pairing Failed.", actionContinue);
+            };
             clearPinButton.OnPress += () =>
             {
                 pinNumpad.Disabled = false;
@@ -254,7 +565,7 @@ namespace PlayTogetherMod
             for(int i =0; i < 10; i++)
             {
                 int buttonNumber = i;
-                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", ""));
+                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
                     if (_pinInputs.Length < 4)
@@ -270,17 +581,16 @@ namespace PlayTogetherMod
                 };
             }
 
-            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Pair yourself with a Host", "CVRPlayTogether");
-            var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
             joinToggle.OnValueUpdated += b =>
             {
                 if(b == true)
                 {
+                    UIHandleGPDriver();
                     _moonlight.Run();
                 }
                 else
                 {
-                    _moonlight.Stop();
+                    _moonlight.StopSession();
                 }
             };
             var lobbyNumpad = pairPage.AddCategory("Enter lobby code..");
@@ -288,47 +598,116 @@ namespace PlayTogetherMod
             var connectButton = confirmCat.AddButton("", "", "Attempt connection with Host");
             connectButton.OnPress += () =>
             {
+                if (connectButton.ButtonText == "")
+                    return;
                 var pairingPin = GeneratePairingPin();
-                QuickMenuAPI.ShowNotice("Pairing Pin", $"The host must enter this pin to approve your connection: {pairingPin}", null);
-                _moonlight.LobbyCode = _targetLobbyCode;
+                QuickMenuAPI.ShowNotice("Pairing Pin", 
+                    $"Please only press OK after Pairing succeeded or failed. The host will tell you -> They must enter this pin to approve your connection: {pairingPin}",
+                    () => { _moonlight.StopPairing(); });
+                _moonlight.LobbyCode = connectButton.ButtonText;
                 _moonlight.PairWithHost(pairingPin);
             };
             var clearLobbyCodeButton = confirmCat.AddButton("Clear", "", "Clear Lobby code");
             clearLobbyCodeButton.OnPress += () =>
             {
                 lobbyNumpad.Disabled = false;
-                _targetLobbyCode = "";
-                connectButton.ButtonText = _targetLobbyCode;
+                _tempTargetLobbyCode = "";
+                connectButton.ButtonText = "";
             };
             List<Button> lobbyCodeButtons = new List<Button>();
             for (int i = 0; i < 10; i++)
             {
                 int buttonNumber = i;
-                lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "", ""));
+                lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 lobbyCodeButtons[buttonNumber].OnPress += () =>
                 {
-                    if (_targetLobbyCode.Length < 10)
+                    if (_tempTargetLobbyCode.Length < 10)
                     {
-                        _targetLobbyCode = _targetLobbyCode + buttonNumber.ToString();
-                        connectButton.ButtonText = _targetLobbyCode;
+                        _tempTargetLobbyCode = _tempTargetLobbyCode + buttonNumber.ToString();
+                        connectButton.ButtonText = _tempTargetLobbyCode;
                     }
-                    if (_targetLobbyCode.Length == 10)
+                    if (_tempTargetLobbyCode.Length == 10)
                     {
-                        connectButton.ButtonText = _targetLobbyCode;
+                        connectButton.ButtonText = _tempTargetLobbyCode;
                         lobbyNumpad.Disabled = true;
                     }
                 };
             }
         }
 
+        public void EditUwcWindowTextures(Scene sceneInstance, Dictionary<string, object> propertyChanges, bool isField)
+        {
+            if (!sceneInstance.IsValid()) return;
+            GameObject[] gObjs = sceneInstance.GetRootGameObjects();
+
+            foreach (var item in gObjs)
+            {
+                FindAndEditUwcWindowTexture(item, propertyChanges, isField);
+            }
+        }
+
+        void FindAndEditUwcWindowTexture(GameObject go, Dictionary<string, object> propertyChanges, bool isField)
+        {
+            uWindowCapture.UwcWindowTexture[] comps = go.GetComponentsInChildren<uWindowCapture.UwcWindowTexture>();
+            if(isField)
+            {
+                foreach (uWindowCapture.UwcWindowTexture comp in comps)
+                {
+                    EditComponentField(comp, propertyChanges);
+                }
+            }
+            else
+            {
+                foreach (uWindowCapture.UwcWindowTexture comp in comps)
+                {
+                    EditComponent(comp, propertyChanges);
+                }
+            }
+        }
+
+        void EditComponentField(uWindowCapture.UwcWindowTexture component, Dictionary<string, object> propertyChanges)
+        {
+            foreach (var pair in propertyChanges)
+            {
+                FieldInfo field = typeof(uWindowCapture.UwcWindowTexture).GetField(pair.Key);
+
+                if (field != null)
+                {
+                    try { field.SetValue(component, pair.Value); }
+                    catch (Exception ex)
+                    {
+                        MelonLogger.Msg($"Error setting private property '{pair.Key}': {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        void EditComponent(uWindowCapture.UwcWindowTexture component, Dictionary<string, object> propertyChanges)
+        {
+            foreach (var pair in propertyChanges)
+            {
+                PropertyInfo property = typeof(uWindowCapture.UwcWindowTexture).GetProperty(pair.Key);
+
+                if (property != null && property.CanWrite)
+                {
+                    try { property.SetValue(component, pair.Value); }
+                    catch (Exception ex)
+                    {
+                        MelonLogger.Msg($"Error setting private property '{pair.Key}': {ex.Message}");
+                    }
+                }
+            }
+        }
+
         public override void OnInitializeMelon()
         {
             UnpackResources();
+            //AudioHelper audioHelper = new AudioHelper();
+            //audioHelper.SetAudioDeviceAlt(audioHelper.GetCurrentProcessId(), "ROOT\\MEDIA\\0000"); //VBAudioVACWDM 
+
             //Our CCK Prop contains a custom MonoBehavior script component. We force-allow it here.
             var propWhitelist = SharedFilter._spawnableWhitelist;
             propWhitelist.Add(typeof(uWindowCapture.UwcWindowTexture));
-            //Assembly assembly = Assembly.GetAssembly(typeof(uWindowCapture.UwcWindowTexture));
-            //propWhitelist.Add(assembly.GetType("uWindowCapture.UwcWindowTexture"));
 
             _sunshine = new Sunshine();
             _moonlight = new Moonlight();

@@ -34,7 +34,7 @@ To build CVR-PlayTogether (for devs)
 
 Prerequesites
 -------------------------
-- Visual Studio 2022 with .NET Standard 2.1 framework
+- Visual Studio 2022 with .NET Framework 4.8
 
 Steps
 -----------
@@ -58,12 +58,15 @@ Steps
 - copy and paste all the DLLs from `'<ChilloutVR path>/MelonLoader/net35/'` into `'PlayTogetherMain/libs'`
 - get latest BTKUILib.dll from 'https://github.com/Searaphim/BTKUILib/releases' and paste it into `'PlayTogetherMain/libs'` (or build it yourself and do the same)
 - delete everything in BTKUILib folder once done (to avoid compilation issues)
-- build the PlayTogetherMain project with Visual Studio
-- Open a developer command prompt: `Tools->Command Line->Developer Command Line`
-- Enter the following in it: 
-
-		msbuild /t:ILMerge 
-
-- You can find the resulting DLL in `'PlayTogetherMain/ILMergeOut'`. That is the mod to be loaded in the ChilloutVR client via MelonLoader. (Put it in `<ChilloutVR path>/Mods`)
 - If you build your own CVR-PlayTogether dll you also need to do the same for the prop and use your own DLL otherwise the mod won't work due to signature differences.
 		See the [instructions](https://github.com/Searaphim/CCK-PlayTogether)
+
+- Same principle for the next C++ compiled DLL. Build your own or use the one provided.
+  (It is also used by both the Prop/Unity Editor and the Mod/Runtime)
+- Copy/Paste (from the CCK-PlayTogether project to the CVR-PlayTogether project)
+  `CCK-PlayTogether\Assets\uWindowCapture\Plugins\x86_64\uWindowCapture.dll`
+	  into `PlayTogetherMain\resources` 
+- Edit the .csproj file 'Install' target to your own ChilloutVR install location.
+- clean/build the PlayTogetherMain project with Visual Studio.
+- The DLL should now be located in `<ChilloutVR path>/Mods` and ready for use
+

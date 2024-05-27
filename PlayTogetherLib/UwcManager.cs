@@ -27,6 +27,7 @@ public class UwcManager : MonoBehaviour
         }
 
         var go = new GameObject("uWindowCapture");
+        DontDestroyOnLoad(go);
         instance_ = go.AddComponent<UwcManager>();
         return instance_;
     }

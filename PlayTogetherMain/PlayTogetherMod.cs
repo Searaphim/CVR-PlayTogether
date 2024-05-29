@@ -48,7 +48,7 @@ namespace PlayTogetherMod
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
         private string _HostedAppName = "";
-        private SunshineConf _sunshineConf = new SunshineConf();
+        public SunshineConf Config = new SunshineConf();
 
         public string HostedAppName
         {
@@ -56,7 +56,7 @@ namespace PlayTogetherMod
             set { _HostedAppName = value; } 
         }
 
-        private class SunshineConf 
+        public class SunshineConf 
         {
             public string virtual_sink {  get; set; }
             public bool keyboard {  get; set; }
@@ -166,11 +166,9 @@ namespace PlayTogetherMod
             {
                 foreach (var property in typeof(SunshineConf).GetProperties())
                 {
-                    var value = property.GetValue(_sunshineConf);
-
+                    var value = property.GetValue(Config);
                     if (value != null)
                     {
-                        
                         switch (property.PropertyType.Name)
                         {
                             case "Boolean":
@@ -530,6 +528,13 @@ namespace PlayTogetherMod
             var hostToggle = hostCat.AddToggle("Host", "Select the game and start hosting", false);
             var hostConfPage = hostCat.AddPage("Config", "dummy.png","Host configurations", "CVRPlayTogether");
             var hostAudioCat = hostConfPage.AddCategory("Audio");
+            var hostNetworkCat = hostConfPage.AddCategory("Network");
+            var upnpBtn = hostNetworkCat.AddToggle("UPNP", "Automatic port forwarding. Not all routers support it. Restart Host to Apply", true);
+            upnpBtn.OnValueUpdated += b =>
+            {
+                _sunshine.Config.upnp = b;
+            };
+
             var aMixerBtn = hostAudioCat.AddButton("Audio Mixer", "dummy.png", "Opens on your Desktop");
             aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
             var aListen = hostAudioCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");

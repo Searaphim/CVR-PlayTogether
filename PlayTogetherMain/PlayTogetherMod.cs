@@ -534,11 +534,14 @@ namespace PlayTogetherMod
             {
                 _sunshine.Config.upnp = b;
             };
-
+            var hostNwkHelpBtn = hostNetworkCat.AddButton("Web Help", "", "Opens up the networking help page on your web browser.");
+            hostNwkHelpBtn.OnPress += () => { Misc.WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Networking"); };
             var aMixerBtn = hostAudioCat.AddButton("Audio Mixer", "dummy.png", "Opens on your Desktop");
             aMixerBtn.OnPress += () => { AudioHelper.PopW10SoundMixer(); };
             var aListen = hostAudioCat.AddButton("Audio Devices", "dummy.png", "Opens on your Desktop");
             aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
+            var aHelpBtn = hostAudioCat.AddButton("Web Help", "", "Opens up the audio help page on your web browser.");
+            aHelpBtn.OnPress += () => { AudioHelper.PopSoundGuide(); };
             var pairPage = clientCat.AddPage("Connect to Lobby", "", "Connect & Pair yourself to a Host", "CVRPlayTogether");
             var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
             hostToggle.OnValueUpdated += async b =>

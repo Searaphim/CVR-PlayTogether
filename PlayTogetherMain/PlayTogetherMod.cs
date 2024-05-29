@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.ComponentModel;
+using RTG;
 
 namespace PlayTogetherMod
 {
@@ -47,11 +48,28 @@ namespace PlayTogetherMod
         private string _usr = "defaultusr";
         private string _pwd = "defaultpwd";
         private string _HostedAppName = "";
+        private SunshineConf _sunshineConf = new SunshineConf();
 
         public string HostedAppName
         {
             get { return _HostedAppName; }
             set { _HostedAppName = value; } 
+        }
+
+        private class SunshineConf 
+        {
+            public string virtual_sink {  get; set; }
+            public bool keyboard {  get; set; }
+            public bool mouse { get; set; }
+            public string origin_web_ui_allowed { get; set; }
+            
+            public SunshineConf() 
+            {
+                this.virtual_sink = "VB-Audio Virtual Cable";
+                this.keyboard = false;
+                this.mouse = false;
+                this.origin_web_ui_allowed = "pc";
+            }
         }
 
         ~Sunshine() {
@@ -142,11 +160,27 @@ namespace PlayTogetherMod
             if(!Directory.Exists(APPSCONF_DIR))
                 Directory.CreateDirectory(APPSCONF_DIR);
 
-            string settingsStr = "virtual_sink = VB-Audio Virtual Cable\r\n" +
-                                 "keyboard = disabled\r\n" +
-                                 "mouse = disabled\r\n" +
-                                 "origin_web_ui_allowed = pc\r\n";
-            File.WriteAllText(SETTINGS_PATH, settingsStr);
+            using (var writer = File.CreateText(SETTINGS_PATH))
+            {
+                foreach (var property in typeof(SunshineConf).GetProperties())
+                {
+                    var value = property.GetValue(_sunshineConf);
+
+                    if (value != null)
+                    {
+                        
+                        switch (property.PropertyType.Name)
+                        {
+                            case "Boolean":
+                                writer.WriteLine($"{property.Name} = {((bool)value ? "enabled" : "disabled")}");
+                                break;
+                            default:
+                                writer.WriteLine($"{property.Name} = {value}");
+                                break;
+                        }
+                    }
+                }
+            }
         }
 
         public void Run(string appPath)

@@ -62,13 +62,15 @@ namespace PlayTogetherMod
             public bool keyboard {  get; set; }
             public bool mouse { get; set; }
             public string origin_web_ui_allowed { get; set; }
-            
+            public bool upnp { get; set; }
+
             public SunshineConf() 
             {
                 this.virtual_sink = "VB-Audio Virtual Cable";
                 this.keyboard = false;
                 this.mouse = false;
                 this.origin_web_ui_allowed = "pc";
+                this.upnp = true;
             }
         }
 

@@ -529,6 +529,11 @@ namespace PlayTogetherMod
             var hostConfPage = hostCat.AddPage("Config", "dummy.png","Host configurations", "CVRPlayTogether");
             var hostAudioCat = hostConfPage.AddCategory("Audio");
             var hostNetworkCat = hostConfPage.AddCategory("Network");
+            var hostControllersCat = hostConfPage.AddCategory("Controllers");
+            var hostControllersTestBtn = hostControllersCat.AddButton("Game Controllers","dummy.png","Pop the game controllers desktop window");
+            hostControllersTestBtn.OnPress += () => { Misc.WindowsRun("rundll32.exe shell32.dll,Control_RunDLL joy.cpl"); };
+            var hostControllersHelpBtn = hostControllersCat.AddButton("Web Help", "", "Opens up the controllers help page on your web browser.");
+            hostControllersHelpBtn.OnPress += () => { Misc.WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Controllers"); };
             var upnpBtn = hostNetworkCat.AddToggle("UPNP", "Automatic port forwarding. Not all routers support it. Restart Host to Apply", true);
             upnpBtn.OnValueUpdated += b =>
             {

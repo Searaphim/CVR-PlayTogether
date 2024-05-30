@@ -457,7 +457,7 @@ namespace PlayTogetherMod
                 if (!sceneInstance.IsValid()) return;
                 EditUwcWindowTextures(sceneInstance, changes, false);
             };
-            var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "Toggle Mode", true);
+            var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "When off; make sure the target window is not minimized.", true);
             desktopModeToggle.OnValueUpdated += b =>
             {
                 if (b == true)

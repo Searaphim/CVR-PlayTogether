@@ -23,11 +23,11 @@ Requirements
 
 Installation
 ----------
-TODO
+[Head over to the installation guide on the Wiki](https://github.com/Searaphim/CVR-PlayTogether/wiki/Installation-Guide)
 
 How to use
 ----------
-TODO
+[Head over to the How-To guide on the Wiki](https://github.com/Searaphim/CVR-PlayTogether/wiki/How-To-Play)
 
 To build CVR-PlayTogether (for devs)
 ===================

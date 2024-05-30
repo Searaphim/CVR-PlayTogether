@@ -622,7 +622,7 @@ namespace PlayTogetherMod
             for(int i =0; i < 10; i++)
             {
                 int buttonNumber = i;
-                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", "", ButtonStyle.TextOnly));
+                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", "dummy.png"));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
                     if (_pinInputs.Length < 4)

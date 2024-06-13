@@ -70,14 +70,16 @@ namespace PlayTogetherMod
             public bool keyboard {  get; set; }
             public bool mouse { get; set; }
             public string origin_web_ui_allowed { get; set; }
+            public string output_name { get; set; }
             public bool upnp { get; set; }
 
-            public SunshineConf() 
+            public SunshineConf()
             {
                 this.virtual_sink = "VB-Audio Virtual Cable";
                 this.keyboard = false;
                 this.mouse = false;
                 this.origin_web_ui_allowed = "pc";
+                this.output_name = @"\\.\DISPLAY1";
                 this.upnp = true;
             }
         }
@@ -464,13 +466,15 @@ namespace PlayTogetherMod
             monitorCycleBtn.OnPress += () => 
             {
                 _monitorIterator.SetMonitorCount(UwcManager.desktopCount);
+                var monitorId = _monitorIterator.Next();
                 Dictionary<string, object> changes = new Dictionary<string, object>
                 {
-                    {"desktopIndex", _monitorIterator.Next()}
+                    {"desktopIndex", monitorId}
                 };
                 Scene sceneInstance = SceneManager.GetSceneByName(PROP_SCENE);
                 if (!sceneInstance.IsValid()) return;
                 EditUwcWindowTextures(sceneInstance, changes, false);
+                _sunshine.Config.output_name = UwcManager.FindDesktop(monitorId).title;
             };
             var desktopModeToggle = globalCat.AddToggle("Desktop Mode", "When off; make sure the target window is not minimized.", true);
             desktopModeToggle.OnValueUpdated += b =>

@@ -49,6 +49,14 @@ namespace PlayTogetherMod
         private string _pwd = "defaultpwd";
         private string _HostedAppName = "";
         public SunshineConf Config = new SunshineConf();
+        public StreamMode _streamMode = StreamMode.App;
+
+        public enum StreamMode
+        {
+            App = 0,
+            BigPicture = 1,
+            Desktop = 3
+        };
 
         public string HostedAppName
         {
@@ -188,8 +196,24 @@ namespace PlayTogetherMod
             FlushConfigs();
             GenerateConfigs();
             CreateUser();
-            _HostedAppName = Path.GetFileNameWithoutExtension(appPath);
-            string appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
+            string appstr = "";
+            switch (_streamMode)
+            {
+                case StreamMode.App:
+                    _HostedAppName = Path.GetFileNameWithoutExtension(appPath);
+                    appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + Regex.Replace(appPath, @"\\|/", @"\\") + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
+                    break;
+                case StreamMode.BigPicture:
+                    _HostedAppName = "Steam Big Picture";
+                    appstr = @"{""name"":""" + _HostedAppName + @""",""cmd"":""" + "steam://open/bigpicture" + @""",""auto-detach"":""true"",""wait-all"":""true"",""image-path"":""steam.png""}";
+                    break;
+                case StreamMode.Desktop:
+                    _HostedAppName = "Desktop";
+                    appstr = @"{""name"":""" + _HostedAppName + @""",""image-path"":""desktop.png""}";
+                    break;
+                default:
+                    break;
+            };
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             normalprocess = Process.Start(normalstartinfo);
@@ -267,21 +291,12 @@ namespace PlayTogetherMod
                 File.Delete(INI_PATH); //Not sure about the implications of deleting the [gcmapping] field yet. May need granular control over this file depending on results.
         }
 
-        public bool IsAppBlacklisted(string appTitle)
-        {
-            if(appTitle == "Desktop")
-                return true;
-            return false;
-        }
-
         private void StartSession(string host, string? hostAppTitle)
         {
             if ((hostAppTitle == null) || (hostAppTitle == "") || (host == "") || (host == null))
             {
                 return;
             }
-            if (IsAppBlacklisted(hostAppTitle))
-                return;
             _sessionProc = Process.Start(new ProcessStartInfo()
             {
                 FileName = EXE_PATH,
@@ -530,6 +545,32 @@ namespace PlayTogetherMod
             var hostAudioCat = hostConfPage.AddCategory("Audio");
             var hostNetworkCat = hostConfPage.AddCategory("Network");
             var hostControllersCat = hostConfPage.AddCategory("Controllers");
+            var hostStreamMode = hostConfPage.AddCategory("Stream Mode");
+            var hostAppModeBtn = hostStreamMode.AddButton("App", "", "Stream a selected application");
+            var hostDesktopModeBtn = hostStreamMode.AddButton("Desktop", "", "Stream your desktop");
+            var hostBPModeBtn = hostStreamMode.AddButton("Steam", "", "Stream a steam game or app. in Big Picture mode");
+            hostAppModeBtn.Disabled = true; //Selected by default.
+            hostAppModeBtn.OnPress += () => 
+            {
+                hostAppModeBtn.Disabled = true;
+                hostDesktopModeBtn.Disabled = false;
+                hostBPModeBtn.Disabled = false;
+                _sunshine._streamMode = Sunshine.StreamMode.App;
+            };
+            hostDesktopModeBtn.OnPress += () =>
+            {
+                hostAppModeBtn.Disabled = false;
+                hostDesktopModeBtn.Disabled = true;
+                hostBPModeBtn.Disabled = false;
+                _sunshine._streamMode = Sunshine.StreamMode.Desktop;
+            };
+            hostBPModeBtn.OnPress += () =>
+            {
+                hostAppModeBtn.Disabled = false;
+                hostDesktopModeBtn.Disabled = false;
+                hostBPModeBtn.Disabled = true;
+                _sunshine._streamMode = Sunshine.StreamMode.BigPicture;
+            };
             var hostControllersTestBtn = hostControllersCat.AddButton("Game Controllers","dummy.png","Pop the game controllers desktop window");
             hostControllersTestBtn.OnPress += () => { Misc.WindowsRun("rundll32.exe shell32.dll,Control_RunDLL joy.cpl"); };
             var hostControllersHelpBtn = hostControllersCat.AddButton("Web Help", "", "Opens up the controllers help page on your web browser.");
@@ -566,9 +607,15 @@ namespace PlayTogetherMod
                         hostToggle.ToggleValue = false;
                         return;
                     }
-                    QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
                     hostToggle.Disabled = true;
-                    var filePath = await FileBrowser.BrowseForFile();
+                    string filePath = "";
+                    if (_sunshine._streamMode == Sunshine.StreamMode.App)
+                    {
+                        QuickMenuAPI.ShowNotice("Select App.", "A new File Browser window appeared on your Desktop. Use it to select the application you want to Host.");
+                        filePath = await FileBrowser.BrowseForFile();
+                    }
+                    else
+                        filePath = "dummy";
                     hostToggle.Disabled = false;
                     LoggerInstance.Msg($"Selected file: {filePath}");
                     if (filePath != "")

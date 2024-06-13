@@ -172,7 +172,7 @@ namespace PlayTogetherMod
                         switch (property.PropertyType.Name)
                         {
                             case "Boolean":
-                                writer.WriteLine($"{property.Name} = {((bool)value ? "enabled" : "disabled")}");
+                                writer.WriteLine($"{property.Name} = {((bool)value ? "disabled" : "enabled")}"); //Sunshine bug: The states are inverted.
                                 break;
                             default:
                                 writer.WriteLine($"{property.Name} = {value}");
@@ -534,7 +534,7 @@ namespace PlayTogetherMod
             hostControllersTestBtn.OnPress += () => { Misc.WindowsRun("rundll32.exe shell32.dll,Control_RunDLL joy.cpl"); };
             var hostControllersHelpBtn = hostControllersCat.AddButton("Web Help", "", "Opens up the controllers help page on your web browser.");
             hostControllersHelpBtn.OnPress += () => { Misc.WindowsRun("https://github.com/Searaphim/CVR-PlayTogether/wiki/Controllers"); };
-            var upnpBtn = hostNetworkCat.AddToggle("UPNP", "Automatic port forwarding. Not all routers support it. Restart Host to Apply", true);
+            var upnpBtn = hostNetworkCat.AddToggle("UPNP", "Automatic port forwarding. Not all routers/ISPs support it. Restart Host to Apply", true);
             upnpBtn.OnValueUpdated += b =>
             {
                 _sunshine.Config.upnp = b;

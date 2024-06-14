@@ -70,7 +70,7 @@ namespace PlayTogetherMod
             public bool keyboard {  get; set; }
             public bool mouse { get; set; }
             public string origin_web_ui_allowed { get; set; }
-            public string output_name { get; set; }
+            public string? output_name { get; set; }
             public bool upnp { get; set; }
 
             public SunshineConf()
@@ -79,7 +79,7 @@ namespace PlayTogetherMod
                 this.keyboard = false;
                 this.mouse = false;
                 this.origin_web_ui_allowed = "pc";
-                this.output_name = @"\\.\DISPLAY1";
+                this.output_name = null;
                 this.upnp = true;
             }
         }
@@ -177,6 +177,8 @@ namespace PlayTogetherMod
                 foreach (var property in typeof(SunshineConf).GetProperties())
                 {
                     var value = property.GetValue(Config);
+                    if ((_streamMode != StreamMode.Desktop) && (property.Name == "output_name"))
+                        value = null; //We only want that Config in Desktop mode.
                     if (value != null)
                     {
                         switch (property.PropertyType.Name)
@@ -354,7 +356,7 @@ namespace PlayTogetherMod
         private Page _rootPage;
         private const string PROP_SCENE = "AdditiveContentScene";
         private const string MANAGER_SCENE = "DontDestroyOnLoad";
-        private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-5.0.1.zip";
+        private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-6.0.0.zip";
         private const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
         private const string UWINDOWCAPTURE_RESOURCE = "CVRPlayTogether.resources.uWindowCapture.dll";
         private Sunshine _sunshine;

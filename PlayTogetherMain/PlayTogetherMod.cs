@@ -26,6 +26,13 @@ using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.ComponentModel;
 using RTG;
+using BTKUILib.UIObjects.Objects;
+using Michsky.UI.ModernUIPack;
+using ABI_RC.Core.InteractionSystem;
+using ABI_RC.Systems.GameEventSystem;
+using ABI_RC.Systems.InputManagement.InputModules;
+using ABI_RC.Systems.InputManagement.InputActions;
+using ABI_RC.Systems.InputManagement;
 
 namespace PlayTogetherMod
 {
@@ -34,7 +41,7 @@ namespace PlayTogetherMod
         public const string RESOURCE_FOLDER = @"Mods\CVRPlayTogether_Data";
         public const string UWINDOWCAPTURE_DLL_PATH = @"ChilloutVR_Data\Plugins\x86_64\uWindowCapture.dll";
     }
-
+    
     public class Sunshine
     {
         private const string EXE_PATH = SharedVars.RESOURCE_FOLDER + @"\Sunshine\sunshine.exe";
@@ -594,7 +601,7 @@ namespace PlayTogetherMod
             aListen.OnPress += () => { AudioHelper.PopSoundRecorders(); };
             var aHelpBtn = hostAudioCat.AddButton("Web Help", "", "Opens up the audio help page on your web browser.");
             aHelpBtn.OnPress += () => { AudioHelper.PopSoundGuide(); };
-            var pairPage = clientCat.AddPage("Connect to Lobby", "", "Connect & Pair yourself to a Host", "CVRPlayTogether");
+            var connetToHostBtn = clientCat.AddButton("Enter Lobby Code", "", "Enter the Host's Lobby Code. If pairing succeeds you can then join.");
             var joinToggle = clientCat.AddToggle("Join Game", "Attempt to join game", false);
             hostToggle.OnValueUpdated += async b =>
             {
@@ -643,18 +650,22 @@ namespace PlayTogetherMod
                     viewCodeButton.Disabled = true;
                 }
             };
+            List<Button> pinButtons = new List<Button>();
             var pinNumpad = pinPage.AddCategory("PIN KEYBOARD");
-            Category sendPinCat;
-            sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
-            var sendPinButton = sendPinCat.AddButton("", "", "Validate a friend's PIN");
-            var clearPinButton = sendPinCat.AddButton("Clear", "", "Clear PIN");
+            //Category sendPinCat;
+            //sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
+            var sendPinButton = pinNumpad.AddButton("", "", "Validate a friend's PIN");
+            var clearPinButton = pinNumpad.AddButton("Clear", "", "Clear PIN");
             sendPinButton.OnPress += async () =>
             {
                 sendPinButton.Disabled = true;
                 clearPinButton.Disabled = true;
                 Action actionContinue = () =>
                 {
-                    pinNumpad.Disabled = false;
+                    foreach (var pinBtn in pinButtons)
+                    {
+                        pinBtn.Disabled = false;
+                    }
                     _pinInputs = "";
                     sendPinButton.ButtonText = _pinInputs;
                     sendPinButton.Disabled = false;
@@ -667,15 +678,17 @@ namespace PlayTogetherMod
             };
             clearPinButton.OnPress += () =>
             {
-                pinNumpad.Disabled = false;
+                foreach (var pinBtn in pinButtons)
+                {
+                    pinBtn.Disabled = false;
+                }
                 _pinInputs = "";
                 sendPinButton.ButtonText = _pinInputs;
             };
-            List<Button> pinButtons = new List<Button>();
             for(int i =0; i < 10; i++)
             {
                 int buttonNumber = i;
-                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "", "dummy.png"));
+                pinButtons.Add(pinNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
                 pinButtons[buttonNumber].OnPress += () =>
                 {
                     if (_pinInputs.Length < 4)
@@ -686,7 +699,10 @@ namespace PlayTogetherMod
                     if (_pinInputs.Length == 4)
                     {
                         sendPinButton.ButtonText = _pinInputs;
-                        pinNumpad.Disabled = true;
+                        foreach(var pinBtn in pinButtons)
+                        {
+                            pinBtn.Disabled = true;
+                        }
                     }
                 };
             }
@@ -703,64 +719,26 @@ namespace PlayTogetherMod
                     _moonlight.StopSession();
                 }
             };
-            var lobbyNumpad = pairPage.AddCategory("Enter lobby code..");
-            var confirmCat = pairPage.AddCategory("Connect to lobby");
-            var connectButton = confirmCat.AddButton("", "", "Attempt connection with Host");
-            connectButton.OnPress += () =>
+            connetToHostBtn.OnPress += () => 
             {
-                if (connectButton.ButtonText == "")
-                    return;
-                var pairingPin = GeneratePairingPin();
-                QuickMenuAPI.ShowNotice("Pairing Pin", 
-                    $"Please only press OK after Pairing succeeded or failed. The host will tell you. -> They must enter this pin to approve your connection: {pairingPin}",
-                    () => { 
-                            _moonlight.StopPairing();
-                        _rootPage.OpenPage();
-                          });
-                _moonlight.LobbyCode = connectButton.ButtonText;
-                _moonlight.PairWithHost(pairingPin);
-            };
-            var clearLobbyCodeButton = confirmCat.AddButton("Clear", "", "Clear Lobby code");
-            clearLobbyCodeButton.OnPress += () =>
-            {
-                lobbyNumpad.Disabled = false;
-                _tempTargetLobbyCode = "";
-                connectButton.ButtonText = "";
-            };
-            List<Button> lobbyCodeButtons = new List<Button>();
-            for (int i = 0; i < 10; i++)
-            {
-                int buttonNumber = i;
-                lobbyCodeButtons.Add(lobbyNumpad.AddButton(buttonNumber.ToString(), "dummy.png", ""));
-                lobbyCodeButtons[buttonNumber].OnPress += () =>
+                QuickMenuAPI.OpenKeyboard(_tempTargetLobbyCode, str_val =>
                 {
-                    var maxDigits = GetLobbyCodeMaxDigits(_tempTargetLobbyCode);
-                    if (_tempTargetLobbyCode.Length < maxDigits)
+                    CVR_MenuManager.Instance.ToggleQuickMenu(true); //reopens the quickmenu that the keyboard closed.
+                    var maxDigits = GetLobbyCodeMaxDigits(str_val);
+                    if ((str_val.Length > 0) && (str_val.Length <= maxDigits))
                     {
-                        _tempTargetLobbyCode = _tempTargetLobbyCode + buttonNumber.ToString();
-                        connectButton.ButtonText = _tempTargetLobbyCode;
+                        var pairingPin = GeneratePairingPin();
+                        QuickMenuAPI.ShowNotice("Pairing Pin",
+                            $"Please only press OK after Pairing succeeded or failed. The host will tell you. -> They must enter this pin to approve your connection: {pairingPin}",
+                            () => {
+                                _moonlight.StopPairing();
+                                _rootPage.OpenPage();
+                            });
+                        _moonlight.LobbyCode = str_val;
+                        _moonlight.PairWithHost(pairingPin);  
                     }
-                    if (_tempTargetLobbyCode.Length == maxDigits)
-                    {
-                        connectButton.ButtonText = _tempTargetLobbyCode;
-                        lobbyNumpad.Disabled = true;
-                    }
-                };
-            }
-            var dotButton = lobbyNumpad.AddButton(".", "dummy.png", "");
-            dotButton.OnPress += () =>
-            {
-                var maxDigits = GetLobbyCodeMaxDigits(_tempTargetLobbyCode);
-                if (_tempTargetLobbyCode.Length < maxDigits)
-                {
-                    _tempTargetLobbyCode = _tempTargetLobbyCode + ".";
-                    connectButton.ButtonText = _tempTargetLobbyCode;
-                }
-                if (_tempTargetLobbyCode.Length == maxDigits)
-                {
-                    connectButton.ButtonText = _tempTargetLobbyCode;
-                    lobbyNumpad.Disabled = true;
-                }
+                    _tempTargetLobbyCode = str_val;
+                });
             };
         }
 

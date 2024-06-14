@@ -19,12 +19,13 @@
 	
   <ItemGroup>
     <None Remove="resources\MoonlightPortable-x64-5.0.1.zip" />
+    <None Remove="resources\MoonlightPortable-x64-6.0.0.zip" />
     <None Remove="resources\sunshine-windows-portable.zip" />
     <None Remove="resources\uWindowCapture.dll" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="resources\MoonlightPortable-x64-5.0.1.zip" />
+    <EmbeddedResource Include="resources\MoonlightPortable-x64-6.0.0.zip" />
     <EmbeddedResource Include="resources\sunshine-windows-portable.zip" />
 	<EmbeddedResource Include="resources\uWindowCapture.dll" />
   </ItemGroup>

@@ -456,7 +456,7 @@ namespace PlayTogetherMod
             if (codeStr.Contains("."))
                 return 15;
             else
-                return 10;
+                return 7;
         }
 
         private void MakeUI()

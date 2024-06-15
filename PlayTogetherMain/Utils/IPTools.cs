@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System;
 using System.Net;
+using System.Text;
 
 namespace PlayTogetherMod.Utils
 {
@@ -17,10 +18,42 @@ namespace PlayTogetherMod.Utils
             return ipAddress;
         }
 
+        public static class Base36Formatter
+        {
+            const string alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            public static string ToBase36(uint value)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                while (value > 0u)
+                {
+                    int remainder = unchecked((int)(value % 36));
+                    sb.Insert(0, alphabet[remainder]);
+                    value /= 36;
+                }
+
+                return sb.ToString();
+            }
+
+            public static uint FromBase36(string value)
+            {
+                uint result = 0;
+                value = value.ToUpper();
+                for (int i = 0; i < value.Length; i++)
+                {
+                    char c = value[i];
+                    int digitValue = Array.IndexOf(alphabet.ToCharArray(), c);
+                    result += (uint)(digitValue * Math.Pow(36, value.Length - 1 - i));
+                }
+
+                return result;
+            }
+        }
+
         internal static string GenLobbyCode()
         {
             int roundedTime = (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600) / 7200 * 7200; //Makes lobby code expire between 1-2 hours
-            return ScrambleIp(GetPublicIPAddress(), roundedTime).ToString();
+            return Base36Formatter.ToBase36(ScrambleIp(GetPublicIPAddress(), roundedTime));
         }
 
         internal static string LobbyCodeToIP(string lobbyCode)
@@ -28,10 +61,7 @@ namespace PlayTogetherMod.Utils
             if (lobbyCode.Contains("."))
                 return lobbyCode;
             int roundedTime = (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600) / 7200 * 7200;
-            uint codeAsInt = 0;
-            if(uint.TryParse(lobbyCode, out codeAsInt))
-                return UnscrambleIp(codeAsInt, roundedTime);
-            return "";
+            return UnscrambleIp(Base36Formatter.FromBase36(lobbyCode), roundedTime);
         }
 
         public static uint ScrambleIp(string ipAddress, int roundedTime)

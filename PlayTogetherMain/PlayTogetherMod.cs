@@ -24,15 +24,7 @@ using static ABI_RC.Systems.Safety.BundleVerifier.RestrictedProcessRunner.Intero
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
-using System.ComponentModel;
-using RTG;
-using BTKUILib.UIObjects.Objects;
-using Michsky.UI.ModernUIPack;
 using ABI_RC.Core.InteractionSystem;
-using ABI_RC.Systems.GameEventSystem;
-using ABI_RC.Systems.InputManagement.InputModules;
-using ABI_RC.Systems.InputManagement.InputActions;
-using ABI_RC.Systems.InputManagement;
 
 namespace PlayTogetherMod
 {
@@ -191,7 +183,10 @@ namespace PlayTogetherMod
                         switch (property.PropertyType.Name)
                         {
                             case "Boolean":
-                                writer.WriteLine($"{property.Name} = {((bool)value ? "disabled" : "enabled")}"); //Sunshine bug: The states are inverted.
+                                if(property.Name == "upnp")
+                                    writer.WriteLine($"{property.Name} = {((bool)value ? "disabled" : "enabled")}"); //Sunshine bug: The states are inverted.
+                                else
+                                    writer.WriteLine($"{property.Name} = {((bool)value ? "enabled" : "disabled")}");
                                 break;
                             default:
                                 writer.WriteLine($"{property.Name} = {value}");

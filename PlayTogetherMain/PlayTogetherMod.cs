@@ -222,6 +222,7 @@ namespace PlayTogetherMod
             };
             File.WriteAllText(APPSDEFCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
             File.WriteAllText(APPSCONF_PATH, @"{""env"":{},""apps"":[" + appstr + @"]}"); //Temporary lazy fix for json issues
+
             normalprocess = Process.Start(normalstartinfo);
         }
 
@@ -628,7 +629,7 @@ namespace PlayTogetherMod
                     LoggerInstance.Msg($"Selected file: {filePath}");
                     if (filePath != "")
                     {
-                        _sunshine.Run(filePath);
+                        await Task.Run(() => _sunshine.Run(filePath));
                         pinPage.Disabled = false;
                         viewCodeButton.Disabled = false;
                     }
@@ -702,12 +703,12 @@ namespace PlayTogetherMod
                 };
             }
 
-            joinToggle.OnValueUpdated += b =>
+            joinToggle.OnValueUpdated += async b =>
             {
                 if(b == true)
                 {
                     UIHandleGPDriver();
-                    _moonlight.Run();
+                    await Task.Run(() => _moonlight.Run());
                 }
                 else
                 {

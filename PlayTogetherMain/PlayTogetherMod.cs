@@ -25,6 +25,8 @@ using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using ABI_RC.Core.InteractionSystem;
+using Michsky.UI.ModernUIPack;
+using BTKUILib.UIObjects.Objects;
 
 namespace PlayTogetherMod
 {
@@ -554,7 +556,7 @@ namespace PlayTogetherMod
             var hostAudioCat = hostConfPage.AddCategory("Audio");
             var hostNetworkCat = hostConfPage.AddCategory("Network");
             var hostControllersCat = hostConfPage.AddCategory("Controllers");
-            var hostStreamMode = hostConfPage.AddCategory("Stream Mode");
+            var hostStreamMode = hostConfPage.AddCategory("Stream Mode (Greyed-out = Selected)");
             var hostAppModeBtn = hostStreamMode.AddButton("App", "", "Stream a selected application");
             var hostDesktopModeBtn = hostStreamMode.AddButton("Desktop", "", "Stream your desktop");
             var hostBPModeBtn = hostStreamMode.AddButton("Steam", "", "Stream a steam game or app. in Big Picture mode");

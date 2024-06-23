@@ -668,6 +668,7 @@ namespace PlayTogetherMod
                     sendPinButton.ButtonText = _pinInputs;
                     sendPinButton.Disabled = false;
                     clearPinButton.Disabled = false;
+                    _rootPage.OpenPage();
                 };
                 var response = await _sunshine.SendPin(_pinInputs);
                 if (response)

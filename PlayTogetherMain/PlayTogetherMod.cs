@@ -364,6 +364,8 @@ namespace PlayTogetherMod
         private const string MOONLIGHT_RESOURCE = "CVRPlayTogether.resources.MoonlightPortable-x64-6.0.0.zip";
         private const string SUNSHINE_RESOURCE = "CVRPlayTogether.resources.sunshine-windows-portable.zip";
         private const string UWINDOWCAPTURE_RESOURCE = "CVRPlayTogether.resources.uWindowCapture.dll";
+        private const string MODICON_RESOURCE = "CVRPlayTogether.resources.CVRPTIcon.png";
+        private const string CONFIRMICON_RESOURCE = "CVRPlayTogether.resources.Confirm.png";
         private Sunshine _sunshine;
         private Moonlight _moonlight;
         private string _pinInputs = "";
@@ -459,8 +461,11 @@ namespace PlayTogetherMod
 
         private void MakeUI()
         {
+            QuickMenuAPI.PrepareIcon("CVRPlayTogether", "ModIcon", Assembly.GetExecutingAssembly().GetManifestResourceStream(MODICON_RESOURCE));
+            QuickMenuAPI.PrepareIcon("CVRPlayTogether", "ConfirmIcon", Assembly.GetExecutingAssembly().GetManifestResourceStream(CONFIRMICON_RESOURCE));
+
             //!! Page() cannot have special characters for modName
-            _rootPage = new Page("CVRPlayTogether", "Root Page", true)
+            _rootPage = new Page("CVRPlayTogether", "Root Page", true, "ModIcon")
             {
                 MenuTitle = "CVR-PlayTogether Settings",
                 MenuSubtitle = "Settings are applied to EVERY spawned screen"
@@ -652,7 +657,7 @@ namespace PlayTogetherMod
             var pinNumpad = pinPage.AddCategory("PIN KEYBOARD");
             //Category sendPinCat;
             //sendPinCat = pinPage.AddCategory("Enter Friend's pairing PIN");
-            var sendPinButton = pinNumpad.AddButton("", "", "Validate a friend's PIN");
+            var sendPinButton = pinNumpad.AddButton("", "ConfirmIcon", "Validate a friend's PIN");
             var clearPinButton = pinNumpad.AddButton("Clear", "", "Clear PIN");
             sendPinButton.OnPress += async () =>
             {

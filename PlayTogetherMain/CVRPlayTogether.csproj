@@ -18,6 +18,8 @@
   </PropertyGroup>
 	
   <ItemGroup>
+    <None Remove="resources\Confirm.png" />
+    <None Remove="resources\CVRPTIcon.png" />
     <None Remove="resources\MoonlightPortable-x64-5.0.1.zip" />
     <None Remove="resources\MoonlightPortable-x64-6.0.0.zip" />
     <None Remove="resources\sunshine-windows-portable.zip" />
@@ -25,6 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="resources\Confirm.png" />
+    <EmbeddedResource Include="resources\CVRPTIcon.png" />
     <EmbeddedResource Include="resources\MoonlightPortable-x64-6.0.0.zip" />
     <EmbeddedResource Include="resources\sunshine-windows-portable.zip" />
 	<EmbeddedResource Include="resources\uWindowCapture.dll" />

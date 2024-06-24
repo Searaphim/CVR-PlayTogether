@@ -720,6 +720,12 @@ namespace PlayTogetherMod
             };
             connetToHostBtn.OnPress += () => 
             {
+                if(_moonlight.SessionProcess != null)
+                {
+                    _moonlight.StopSession();
+                    joinToggle.ToggleValue = false;
+                }
+
                 QuickMenuAPI.OpenKeyboard(_tempTargetLobbyCode, str_val =>
                 {
                     CVR_MenuManager.Instance.ToggleQuickMenu(true); //reopens the quickmenu that the keyboard closed.

@@ -317,6 +317,12 @@ namespace PlayTogetherMod
             });
         }
 
+        public bool IsPaired()
+        {
+            if(GetHostAppTitle() == null) return false;
+            return true;
+        }
+
         public void Run()
         {
             StartSession(_lobbyDestination, GetHostAppTitle());
@@ -742,6 +748,10 @@ namespace PlayTogetherMod
                             $"Please only press OK after Pairing succeeded or failed. The host will tell you. -> They must enter this pin to approve your connection: {pairingPin}",
                             () => {
                                 _moonlight.StopPairing();
+                                if (_moonlight.IsPaired())
+                                    QuickMenuAPI.ShowNotice("Pairing State", "Pairing succeeded!");
+                                else
+                                    QuickMenuAPI.ShowNotice("Pairing State", "Pairing failed.");
                                 _rootPage.OpenPage();
                             });
                         _moonlight.LobbyCode = str_val;
